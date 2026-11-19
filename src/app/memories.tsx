@@ -23,23 +23,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { DatePickerField } from '@/components/DatePickerField';
 import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
-import { MEMORY_TAGS, Pastel, RoundedFont } from '@/constants/pastelTheme';
+import {
+  BodyFontBold,
+  BodyFontSemi,
+  MEMORY_TAGS,
+  MonoFont,
+  MonoFontBold,
+  Pastel,
+  RoundedFont,
+  SerifFontSemi,
+} from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { MemoryItem, MemoryTag } from '@/types/couple';
 import { formatIndonesianDate } from '@/utils/dateCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
 
 const MEMORY_STICKERS = ['📸', '🍜', '🛵', '🍦', '🌸', '🎬', '🧸', '✨'];
-const CARD_COLORS = ['#FFE8EE', '#FFF4DC', '#E5F4FF', '#EFEAFF', '#E3FAF2'];
+const CARD_COLORS = ['#F9EAE4', '#FBF1DD', '#E8EFF2', '#E9EDF2', '#E7F0EA'];
 
 interface MemoryCardProps {
   item: MemoryItem;
+  index: number;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
 const MemoryCard = React.memo(function MemoryCard({
   item,
+  index,
   onToggleFavorite,
   onDelete,
 }: MemoryCardProps) {
@@ -47,8 +58,8 @@ const MemoryCard = React.memo(function MemoryCard({
 
   return (
     <View style={styles.polaroidCard}>
-      {/* Photo or Pastel Illustration Cover */}
-      <View style={[styles.coverBox, { backgroundColor: item.cardBg }]}>
+      {/* Contact Sheet Photo / Paper Illustration Bay */}
+      <View style={[styles.coverBox, { backgroundColor: item.cardBg || Pastel.bgMuted }]}>
         {item.photoUri ? (
           <Image
             source={{ uri: item.photoUri }}
@@ -60,15 +71,17 @@ const MemoryCard = React.memo(function MemoryCard({
         ) : (
           <View style={styles.pastelCoverContent}>
             <Text style={styles.pastelCoverSticker}>{item.sticker}</Text>
-            <Text style={styles.pastelCoverHint}>Momen Tersimpan</Text>
+            <Text style={styles.pastelCoverHint}>
+              ARSIP NO.{String(index + 1).padStart(2, '0')}
+            </Text>
           </View>
         )}
 
         {/* Top Badges */}
         <View style={styles.coverTopRow}>
-          <View style={[styles.tagPill, { backgroundColor: tagMeta.bg }]}>
+          <View style={[styles.tagPill, { backgroundColor: Pastel.bgElevated }]}>
             <Text style={[styles.tagPillText, { color: tagMeta.accent }]}>
-              {tagMeta.emoji} {tagMeta.label}
+              {tagMeta.label.toUpperCase()}
             </Text>
           </View>
 
@@ -77,30 +90,30 @@ const MemoryCard = React.memo(function MemoryCard({
             style={styles.favCircle}
             scaleTo={0.85}>
             <Heart
-              size={16}
-              color={item.isFavorite ? Pastel.coral : Pastel.textSoft}
+              size={15}
+              color={item.isFavorite ? Pastel.coral : Pastel.textMuted}
               fill={item.isFavorite ? Pastel.coral : 'none'}
             />
           </BouncyPressable>
         </View>
       </View>
 
-      {/* Story Body */}
+      {/* Archival Story Ledger */}
       <View style={styles.cardBody}>
         <View style={styles.cardTitleRow}>
-          <Text style={styles.cardTitle}>
-            {item.sticker} {item.title}
-          </Text>
+          <Text style={styles.cardTitle}>{item.title}</Text>
           <BouncyPressable onPress={() => onDelete(item.id)} style={styles.deleteBtn}>
             <Trash2 size={14} color={Pastel.textSoft} />
           </BouncyPressable>
         </View>
 
         <View style={styles.metaRow}>
-          <Text style={styles.metaDate}>📅 {formatIndonesianDate(item.date)}</Text>
+          <Text style={styles.metaDate}>
+            {formatIndonesianDate(item.date).toUpperCase()}
+          </Text>
           {item.location ? (
             <View style={styles.metaLocRow}>
-              <MapPin size={12} color={Pastel.textMuted} />
+              <MapPin size={11} color={Pastel.textMuted} />
               <Text style={styles.metaLoc} numberOfLines={1}>
                 {item.location}
               </Text>
@@ -186,7 +199,7 @@ export default function MemoriesScreen() {
     const randomBg = CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
     addMemory({
       title: title.trim(),
-      story: story.trim() || 'Momen seru yang pengen selalu kita ingat berdua 💕',
+      story: story.trim() || 'Momen yang selalu ingin kita simpan berdua.',
       location: location.trim() || 'Tempat Favorit Kita',
       date: dateStr.trim() || new Date().toISOString().slice(0, 10),
       tag,
@@ -202,9 +215,10 @@ export default function MemoriesScreen() {
   }, [addMemory, dateStr, location, photoUri, sticker, story, tag, title]);
 
   const renderItem = useCallback(
-    ({ item }: { item: MemoryItem }) => (
+    ({ item, index }: { item: MemoryItem; index: number }) => (
       <MemoryCard
         item={item}
+        index={index}
         onToggleFavorite={handleToggleFavorite}
         onDelete={handleDelete}
       />
@@ -217,24 +231,24 @@ export default function MemoriesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* Header */}
+        {/* Editorial Page Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.pageTitle}>Jurnal Kenangan 📸</Text>
+            <Text style={styles.pageTitle}>Jurnal Kenangan</Text>
             <Text style={styles.pageSub}>
-              {memories.length} momen tersimpan • {favCount} favorit
+              {memories.length} MOMEN · {favCount} FAVORIT
             </Text>
           </View>
 
           <BouncyPressable
             onPress={() => setModalVisible(true)}
             style={styles.addBtn}>
-            <Plus size={16} color={Pastel.white} />
+            <Plus size={15} color={Pastel.pureWhite} />
             <Text style={styles.addBtnText}>Momen</Text>
           </BouncyPressable>
         </View>
 
-        {/* Filter Bar */}
+        {/* Filter Strip */}
         <View style={styles.filterWrap}>
           <ScrollView
             horizontal
@@ -250,14 +264,14 @@ export default function MemoriesScreen() {
                 },
               ]}>
               <Heart
-                size={13}
+                size={12}
                 color={onlyFavorites ? Pastel.coralDark : Pastel.textMuted}
                 fill={onlyFavorites ? Pastel.coralDark : 'none'}
               />
               <Text
                 style={[
                   styles.filterChipText,
-                  onlyFavorites && { color: Pastel.coralDark, fontWeight: '800' },
+                  onlyFavorites && { color: Pastel.coralDark, fontFamily: BodyFontBold },
                 ]}>
                 Favorit
               </Text>
@@ -272,15 +286,14 @@ export default function MemoriesScreen() {
                   style={[
                     styles.filterChip,
                     active && {
-                      backgroundColor: t.bg,
-                      borderColor: t.accent,
+                      backgroundColor: Pastel.text,
+                      borderColor: Pastel.text,
                     },
                   ]}>
-                  <Text style={styles.filterEmoji}>{t.emoji}</Text>
                   <Text
                     style={[
                       styles.filterChipText,
-                      active && { color: t.accent, fontWeight: '800' },
+                      active && { color: Pastel.pureWhite, fontFamily: BodyFontBold },
                     ]}>
                     {t.label}
                   </Text>
@@ -290,7 +303,7 @@ export default function MemoriesScreen() {
           </ScrollView>
         </View>
 
-        {/* FlashList of Polaroid Memories */}
+        {/* FlashList of Archival Polaroid Memories */}
         <View style={styles.listFlex}>
           <FlashList
             data={filteredMemories}
@@ -300,10 +313,10 @@ export default function MemoriesScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyBox}>
-                <Camera size={36} color={Pastel.sky} />
+                <Camera size={32} color={Pastel.textMuted} />
                 <Text style={styles.emptyTitle}>Belum ada kenangan di kategori ini</Text>
                 <Text style={styles.emptySub}>
-                  Tap tombol “+ Momen” buat simpan cerita atau foto kencan kalian!
+                  Tap tombol “+ Momen” untuk menyimpan foto atau cerita kencan kalian.
                 </Text>
               </View>
             }
@@ -316,7 +329,7 @@ export default function MemoriesScreen() {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Abadikan Momen Baru ✨</Text>
+          <Text style={styles.modalTitle}>Abadikan Momen Baru</Text>
           <BouncyPressable
             onPress={() => setModalVisible(false)}
             style={styles.modalCloseBtn}>
@@ -338,10 +351,10 @@ export default function MemoriesScreen() {
               />
             ) : (
               <View style={styles.photoPickerPlaceholder}>
-                <ImagePlus size={26} color={Pastel.sky} />
+                <ImagePlus size={24} color={Pastel.text} />
                 <Text style={styles.photoPickerTitle}>Pilih Foto dari Galeri</Text>
                 <Text style={styles.photoPickerSub}>
-                  Opsional — kosongkan untuk pakai kartu stiker pastel
+                  Opsional — kosongkan untuk sampul ilustrasi kertas
                 </Text>
               </View>
             )}
@@ -356,7 +369,7 @@ export default function MemoriesScreen() {
             style={styles.modalInput}
           />
 
-          <Text style={styles.inputLabel}>Tanggal Momen (Klik atau Ketik)</Text>
+          <Text style={styles.inputLabel}>Tanggal Momen (Kalender atau Ketik)</Text>
           <DatePickerField
             value={dateStr}
             onChange={setDateStr}
@@ -383,13 +396,12 @@ export default function MemoriesScreen() {
                   onPress={() => setTag(t.id as MemoryTag)}
                   style={[
                     styles.filterChip,
-                    selected && { backgroundColor: t.bg, borderColor: t.accent },
+                    selected && { backgroundColor: Pastel.text, borderColor: Pastel.text },
                   ]}>
-                  <Text style={styles.filterEmoji}>{t.emoji}</Text>
                   <Text
                     style={[
                       styles.filterChipText,
-                      selected && { color: t.accent, fontWeight: '800' },
+                      selected && { color: Pastel.pureWhite, fontFamily: BodyFontBold },
                     ]}>
                     {t.label}
                   </Text>
@@ -398,7 +410,7 @@ export default function MemoriesScreen() {
             })}
           </View>
 
-          <Text style={styles.inputLabel}>Pilih Stiker Lucu</Text>
+          <Text style={styles.inputLabel}>Stiker Sampul</Text>
           <View style={styles.stickerRow}>
             {MEMORY_STICKERS.map((s) => (
               <BouncyPressable
@@ -417,7 +429,7 @@ export default function MemoriesScreen() {
           <TextInput
             value={story}
             onChangeText={setStory}
-            placeholder="Ceritain hal paling lucu atau manis di momen ini..."
+            placeholder="Ceritain hal paling manis atau lucu di momen ini..."
             placeholderTextColor={Pastel.textSoft}
             style={[styles.modalInput, styles.textArea]}
             multiline
@@ -425,8 +437,8 @@ export default function MemoriesScreen() {
 
           <BouncyPressable
             onPress={handleCreateMemory}
-            style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}>
-            <Text style={styles.saveBtnText}>Simpan Kenangan 💕</Text>
+            style={[styles.saveBtn, !title.trim() && { opacity: 0.45 }]}>
+            <Text style={styles.saveBtnText}>Simpan Kenangan</Text>
           </BouncyPressable>
         </ScrollView>
       </KeyboardModalSheet>
@@ -454,62 +466,51 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pageTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 25,
     color: Pastel.text,
   },
   pageSub: {
-    fontFamily: RoundedFont,
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: MonoFont,
+    fontSize: 10.5,
     color: Pastel.textMuted,
+    letterSpacing: 0.6,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Pastel.sky,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    shadowColor: Pastel.sky,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Pastel.text,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
   addBtnText: {
-    fontFamily: RoundedFont,
-    fontSize: 13.5,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    color: Pastel.pureWhite,
   },
   filterWrap: {
     marginBottom: 10,
   },
   filterScroll: {
-    gap: 8,
+    gap: 7,
     paddingVertical: 2,
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    backgroundColor: Pastel.bgElevated,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 999,
-  },
-  filterEmoji: {
-    fontSize: 13,
+    borderRadius: 8,
   },
   filterChipText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 12.5,
-    fontWeight: '600',
     color: Pastel.textMuted,
   },
   listFlex: {
@@ -520,26 +521,23 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   polaroidCard: {
-    backgroundColor: Pastel.white,
-    borderRadius: 24,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 12,
     padding: 12,
-    borderWidth: 2,
-    borderColor: Pastel.border,
-    marginBottom: 14,
-    shadowColor: '#D9A7B8',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    marginBottom: 16,
     gap: 12,
   },
   coverBox: {
     width: '100%',
-    height: 168,
-    borderRadius: 18,
+    height: 176,
+    borderRadius: 8,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Pastel.border,
   },
   coverImage: {
     width: '100%',
@@ -550,14 +548,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pastelCoverSticker: {
-    fontSize: 52,
+    fontSize: 48,
   },
   pastelCoverHint: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: MonoFontBold,
+    fontSize: 10,
     color: Pastel.textMuted,
-    opacity: 0.8,
+    letterSpacing: 1.2,
   },
   coverTopRow: {
     position: 'absolute',
@@ -569,25 +566,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   tagPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
   tagPillText: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
-    fontWeight: '800',
+    fontFamily: MonoFontBold,
+    fontSize: 9.5,
+    letterSpacing: 0.6,
   },
   favCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(252,251,248,0.92)',
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardBody: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     gap: 6,
   },
   cardTitleRow: {
@@ -598,16 +599,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     flex: 1,
-    fontFamily: RoundedFont,
-    fontSize: 16.5,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 18,
     color: Pastel.text,
   },
   deleteBtn: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: Pastel.bg,
+    borderWidth: 1,
+    borderColor: Pastel.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -618,10 +620,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   metaDate: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    fontWeight: '700',
-    color: Pastel.textMuted,
+    fontFamily: MonoFont,
+    fontSize: 10.5,
+    color: Pastel.coralDark,
+    letterSpacing: 0.4,
   },
   metaLocRow: {
     flexDirection: 'row',
@@ -632,30 +634,27 @@ const styles = StyleSheet.create({
   metaLoc: {
     fontFamily: RoundedFont,
     fontSize: 12,
-    fontWeight: '600',
     color: Pastel.textMuted,
   },
   cardStory: {
     fontFamily: RoundedFont,
     fontSize: 13.5,
-    fontWeight: '500',
     color: Pastel.text,
-    lineHeight: 19.5,
+    lineHeight: 20,
   },
   emptyBox: {
-    backgroundColor: Pastel.white,
-    borderRadius: 24,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 14,
     padding: 28,
     alignItems: 'center',
     gap: 8,
-    borderWidth: 2,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     marginTop: 20,
   },
   emptyTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 15.5,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 17,
     color: Pastel.text,
   },
   emptySub: {
@@ -664,23 +663,6 @@ const styles = StyleSheet.create({
     color: Pastel.textMuted,
     textAlign: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(45, 34, 53, 0.42)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 520,
-    maxHeight: '88%',
-    backgroundColor: Pastel.white,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 20,
-    borderTopWidth: 2,
-    borderColor: Pastel.border,
-  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -688,16 +670,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 18,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 20,
     color: Pastel.text,
   },
   modalCloseBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    backgroundColor: Pastel.bg,
+    borderRadius: 10,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -706,12 +687,12 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   photoPickerBox: {
-    height: 132,
-    borderRadius: 20,
-    borderWidth: 2,
+    height: 128,
+    borderRadius: 12,
+    borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#AEDBFF',
-    backgroundColor: Pastel.skySoft,
+    borderColor: Pastel.borderStrong,
+    backgroundColor: Pastel.bg,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -726,10 +707,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   photoPickerTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1B82D6',
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    color: Pastel.text,
   },
   photoPickerSub: {
     fontFamily: RoundedFont,
@@ -738,17 +718,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputLabel: {
-    fontFamily: RoundedFont,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: BodyFontSemi,
+    fontSize: 12,
     color: Pastel.textMuted,
     marginTop: 4,
   },
   modalInput: {
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontFamily: RoundedFont,
@@ -758,14 +737,6 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 82,
     textAlignVertical: 'top',
-  },
-  twoCol: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  col: {
-    flex: 1,
-    gap: 4,
   },
   tagRow: {
     flexDirection: 'row',
@@ -780,9 +751,9 @@ const styles = StyleSheet.create({
   stickerBtn: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 10,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Pastel.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -796,15 +767,14 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     backgroundColor: Pastel.coral,
-    borderRadius: 18,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   saveBtnText: {
-    fontFamily: RoundedFont,
-    fontSize: 15,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontFamily: BodyFontBold,
+    fontSize: 14.5,
+    color: Pastel.pureWhite,
   },
 });

@@ -23,6 +23,20 @@ interface MochiMascotProps {
   delayMs?: number;
 }
 
+function normalizeMochiColor(hex: string): string {
+  const upper = hex.toUpperCase();
+  if (upper === '#FFE8F0' || upper === '#FFE8EE') return '#FBF2E6';
+  if (upper === '#EFEAFF') return '#DCE5D1';
+  return hex;
+}
+
+function normalizeAuraColor(hex: string): string {
+  const upper = hex.toUpperCase();
+  if (upper === '#FF6B8B' || upper === '#E64D70') return Pastel.coral;
+  if (upper === '#8B74FF') return Pastel.matcha;
+  return hex;
+}
+
 export const MochiMascot = React.memo(function MochiMascot({
   bodyColor,
   auraColor,
@@ -32,6 +46,9 @@ export const MochiMascot = React.memo(function MochiMascot({
 }: MochiMascotProps) {
   const isFocused = useIsFocused();
   const translateY = useSharedValue(0);
+
+  const fillHex = normalizeMochiColor(bodyColor);
+  const accentHex = normalizeAuraColor(auraColor);
 
   useEffect(() => {
     if (!isFocused) {
@@ -43,8 +60,8 @@ export const MochiMascot = React.memo(function MochiMascot({
     const timer = setTimeout(() => {
       translateY.value = withRepeat(
         withSequence(
-          withTiming(-4, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.sin) })
+          withTiming(-3, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.sin) })
         ),
         -1,
         true
@@ -62,118 +79,118 @@ export const MochiMascot = React.memo(function MochiMascot({
   }));
 
   return (
-    <View style={[styles.wrapper, { width: size + 16, height: size + 16 }]}>
+    <View style={[styles.wrapper, { width: size + 12, height: size + 10 }]}>
+      {/* Subtle porcelain dish shadow */}
       <View
         style={[
-          styles.aura,
+          styles.groundShadow,
           {
-            width: size + 8,
-            height: size + 8,
-            borderRadius: (size + 8) / 2,
-            backgroundColor: auraColor + '22',
-            borderColor: auraColor + '44',
+            width: size * 0.68,
+            backgroundColor: accentHex + '1F',
           },
         ]}
       />
       <Animated.View style={floatStyle}>
         <Svg width={size} height={size} viewBox="0 0 100 100">
-          {/* Cute Mochi Blob Body */}
+          {/* Hand-inked ceramic wagashi mochi silhouette */}
           <Path
-            d="M16 62 C16 32, 32 18, 50 18 C68 18, 84 32, 84 62 C84 82, 70 88, 50 88 C30 88, 16 82, 16 62 Z"
-            fill={bodyColor}
+            d="M15 64 C15 32, 31 20, 50 20 C69 20, 85 32, 85 64 C85 81, 71 86, 50 86 C29 86, 15 81, 15 64 Z"
+            fill={fillHex}
             stroke={Pastel.text}
-            strokeWidth={3.5}
+            strokeWidth={3.2}
+            strokeLinejoin="round"
           />
-          {/* Top Highlight */}
-          <Ellipse cx={36} cy={31} rx={7} ry={3.5} fill="#FFFFFF" opacity={0.75} />
+          {/* Subtle inner rim sheen (craft stationery feel, no harsh gloss) */}
+          <Path
+            d="M27 36 C33 27, 42 25, 48 25"
+            stroke="#FFFFFF"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.7}
+          />
 
-          {/* Rosy Cheeks */}
-          <Ellipse cx={30} cy={60} rx={6.5} ry={4} fill="#FF8FA8" opacity={0.65} />
-          <Ellipse cx={70} cy={60} rx={6.5} ry={4} fill="#FF8FA8" opacity={0.65} />
+          {/* Soft terracotta ceramic cheeks */}
+          <Ellipse cx={30} cy={60} rx={6} ry={3.4} fill={accentHex} opacity={0.34} />
+          <Ellipse cx={70} cy={60} rx={6} ry={3.4} fill={accentHex} opacity={0.34} />
 
-          {/* Mood Expressions */}
+          {/* Minimal serene ink expressions */}
           {mood === 'sleepy' ? (
             <>
               <Path
-                d="M31 50 Q36 55 41 50"
+                d="M32 51 Q36.5 55.5 41 51"
                 stroke={Pastel.text}
-                strokeWidth={3}
+                strokeWidth={2.8}
                 strokeLinecap="round"
                 fill="none"
               />
               <Path
-                d="M59 50 Q64 55 69 50"
+                d="M59 51 Q63.5 55.5 68 51"
                 stroke={Pastel.text}
-                strokeWidth={3}
+                strokeWidth={2.8}
                 strokeLinecap="round"
                 fill="none"
               />
-              <Circle cx={50} cy={62} r={3.5} fill={Pastel.text} />
+              <Circle cx={50} cy={62} r={2.8} fill={Pastel.text} />
             </>
           ) : mood === 'in_love' ? (
             <>
               <Path
-                d="M32 49 C32 45, 36 45, 36 48 C36 45, 40 45, 40 49 C40 53, 36 55, 36 55 C36 55, 32 53, 32 49 Z"
-                fill={Pastel.coral}
-              />
-              <Path
-                d="M60 49 C60 45, 64 45, 64 48 C64 45, 68 45, 68 49 C68 53, 64 55, 64 55 C64 55, 60 53, 60 49 Z"
-                fill={Pastel.coral}
-              />
-              <Path
-                d="M44 61 Q50 67 56 61"
+                d="M32 51 Q36.5 46 41 51"
                 stroke={Pastel.text}
-                strokeWidth={3}
+                strokeWidth={2.8}
                 strokeLinecap="round"
                 fill="none"
+              />
+              <Circle cx={63.5} cy={50} r={3.4} fill={Pastel.text} />
+              <Path
+                d="M50 56 C50 53.5, 46.8 53.5, 46.8 56 C46.8 58.6, 50 61, 50 61 C50 61, 53.2 58.6, 53.2 56 C53.2 53.5, 50 53.5, 50 56 Z"
+                fill={Pastel.coral}
               />
             </>
           ) : mood === 'chaotic' ? (
             <>
-              <Circle cx={36} cy={49} r={4.5} fill={Pastel.text} />
-              <Circle cx={37.5} cy={47.5} r={1.4} fill="#FFFFFF" />
+              <Circle cx={36.5} cy={50} r={3.8} fill={Pastel.text} />
               <Path
-                d="M59 46 L68 50 L59 54"
+                d="M59 47 L67 50.5 L59 54"
                 stroke={Pastel.text}
-                strokeWidth={3}
+                strokeWidth={2.8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
               />
               <Path
-                d="M42 62 Q46 58 50 62 Q54 66 58 62"
+                d="M43 62 Q46.5 58.5 50 62 Q53.5 65.5 57 62"
                 stroke={Pastel.text}
-                strokeWidth={3}
+                strokeWidth={2.6}
                 strokeLinecap="round"
                 fill="none"
               />
             </>
           ) : (
             <>
-              <Circle cx={36} cy={50} r={4.2} fill={Pastel.text} />
-              <Circle cx={37.5} cy={48.5} r={1.4} fill="#FFFFFF" />
-              <Circle cx={64} cy={50} r={4.2} fill={Pastel.text} />
-              <Circle cx={65.5} cy={48.5} r={1.4} fill="#FFFFFF" />
+              <Circle cx={36.5} cy={50} r={3.4} fill={Pastel.text} />
+              <Circle cx={63.5} cy={50} r={3.4} fill={Pastel.text} />
               {mood === 'miss_you' ? (
                 <Path
-                  d="M45 64 Q50 59 55 64"
+                  d="M45.5 63.5 Q50 59.5 54.5 63.5"
                   stroke={Pastel.text}
-                  strokeWidth={3}
+                  strokeWidth={2.6}
                   strokeLinecap="round"
                   fill="none"
                 />
               ) : mood === 'hungry' ? (
                 <Path
-                  d="M43 60 Q50 69 57 60 Z"
+                  d="M44.5 60 Q50 67.5 55.5 60 Z"
                   fill={Pastel.coral}
                   stroke={Pastel.text}
-                  strokeWidth={2.5}
+                  strokeWidth={2.2}
                 />
               ) : (
                 <Path
-                  d="M44 60 Q50 66 56 60"
+                  d="M45 60 Q50 64.5 55 60"
                   stroke={Pastel.text}
-                  strokeWidth={3}
+                  strokeWidth={2.6}
                   strokeLinecap="round"
                   fill="none"
                 />
@@ -191,8 +208,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  aura: {
+  groundShadow: {
     position: 'absolute',
-    borderWidth: 2,
+    bottom: 3,
+    height: 8,
+    borderRadius: 999,
   },
 });

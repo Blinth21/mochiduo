@@ -1,10 +1,17 @@
-import { Crosshair, Navigation, RefreshCw, Users } from 'lucide-react-native';
+import { Crosshair, Globe, Map as MapIcon, Navigation, RefreshCw, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
-import { Pastel, RoundedFont } from '@/constants/pastelTheme';
+import {
+  BodyFontBold,
+  BodyFontSemi,
+  MonoFont,
+  MonoFontBold,
+  Pastel,
+  SerifFontSemi,
+} from '@/constants/pastelTheme';
 import type { LocationSnapshot, PartnerProfile } from '@/types/couple';
 import { formatDistanceId, getDistanceMeters } from '@/utils/geoCalc';
 
@@ -15,6 +22,13 @@ interface CoupleLocationMapProps {
   myLoc: LocationSnapshot;
   partner: PartnerProfile;
   partnerLoc: LocationSnapshot;
+}
+
+function normalizePinColor(hex: string): string {
+  const upper = hex.toUpperCase();
+  if (upper === '#FF6B8B' || upper === '#E64D70') return Pastel.coral;
+  if (upper === '#8B74FF') return Pastel.matcha;
+  return hex;
 }
 
 function escapeHtml(str: string): string {
@@ -47,32 +61,33 @@ function buildLeafletHtml(params: {
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #FFF9F5; font-family: sans-serif; }
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #F7F3EB; font-family: system-ui, -apple-system, sans-serif; }
     .mochi-pin {
-      width: 38px; height: 38px; border-radius: 50%;
-      border: 3px solid #fff;
-      box-shadow: 0 4px 12px rgba(45,34,53,0.28);
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2.5px solid #FCFBF8;
+      box-shadow: 0 3px 10px rgba(31,27,24,0.24);
       display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 800; font-size: 15px;
+      color: #FFFFFF; font-weight: 700; font-size: 14px;
       position: relative;
     }
     .mochi-pulse {
-      position: absolute; inset: -7px; border-radius: 50%;
-      border: 2.5px solid currentColor; opacity: 0.45;
-      animation: pulse 2s ease-out infinite;
+      position: absolute; inset: -6px; border-radius: 50%;
+      border: 2px solid currentColor; opacity: 0.45;
+      animation: pulse 2.2s ease-out infinite;
     }
     @keyframes pulse {
-      0% { transform: scale(0.85); opacity: 0.7; }
+      0% { transform: scale(0.85); opacity: 0.65; }
       100% { transform: scale(1.45); opacity: 0; }
     }
     .mochi-label {
-      position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
-      background: rgba(255,255,255,0.95); color: #2D2235;
-      padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700;
-      white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      border: 1px solid #F2E4DC;
+      position: absolute; top: 39px; left: 50%; transform: translateX(-50%);
+      background: #FCFBF8; color: #1F1B18;
+      padding: 2px 7px; border-radius: 6px; font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.2px;
+      white-space: nowrap; box-shadow: 0 2px 6px rgba(31,27,24,0.12);
+      border: 1px solid #C9BDA7;
     }
-    .leaflet-control-attribution { font-size: 9px !important; opacity: 0.7; }
+    .leaflet-control-attribution { font-size: 9px !important; opacity: 0.65; background: rgba(252,251,248,0.85) !important; }
   </style>
 </head>
 <body>
@@ -122,9 +137,9 @@ function buildLeafletHtml(params: {
     function makeIcon(initial, name, color) {
       return L.divIcon({
         className: '',
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
-        html: '<div class="mochi-pin" style="background:' + color + ';color:' + color + ';"><div class="mochi-pulse"></div><span style="color:#fff;">' + initial + '</span><div class="mochi-label">' + name + '</div></div>'
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        html: '<div class="mochi-pin" style="background:' + color + ';color:' + color + ';"><div class="mochi-pulse"></div><span style="color:#FFFFFF;">' + initial + '</span><div class="mochi-label">' + name + '</div></div>'
       });
     }
 
@@ -133,7 +148,7 @@ function buildLeafletHtml(params: {
     if (state.partnerSharing) partnerMarker.addTo(map);
 
     var line = L.polyline([[state.myLat, state.myLng], [state.partnerLat, state.partnerLng]], {
-      color: '#FF6B8B', weight: 3, dashArray: '6, 6', opacity: 0.85
+      color: '#C84B31', weight: 2.5, dashArray: '5, 6', opacity: 0.88
     });
     if (state.mySharing && state.partnerSharing) line.addTo(map);
 
@@ -190,6 +205,9 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
   const [reloadKey, setReloadKey] = useState(0);
   const [mapStyle, setMapStyle] = useState<'street' | 'sat'>('street');
 
+  const myPinColor = normalizePinColor(me.auraColor);
+  const partnerPinColor = normalizePinColor(partner.auraColor);
+
   const initialHtml = useMemo(
     () =>
       buildLeafletHtml({
@@ -197,13 +215,13 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
         myLng: myLoc.longitude,
         myName: escapeHtml(me.name),
         myInitial: escapeHtml(me.name.slice(0, 1).toUpperCase()),
-        myColor: me.auraColor,
+        myColor: myPinColor,
         mySharing: myLoc.isSharing,
         partnerLat: partnerLoc.latitude,
         partnerLng: partnerLoc.longitude,
         partnerName: escapeHtml(partner.name),
         partnerInitial: escapeHtml(partner.name.slice(0, 1).toUpperCase()),
-        partnerColor: partner.auraColor,
+        partnerColor: partnerPinColor,
         partnerSharing: partnerLoc.isSharing,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,28 +235,28 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
       myLng: myLoc.longitude,
       myName: escapeHtml(me.name),
       myInitial: escapeHtml(me.name.slice(0, 1).toUpperCase()),
-      myColor: me.auraColor,
+      myColor: myPinColor,
       mySharing: myLoc.isSharing,
       partnerLat: partnerLoc.latitude,
       partnerLng: partnerLoc.longitude,
       partnerName: escapeHtml(partner.name),
       partnerInitial: escapeHtml(partner.name.slice(0, 1).toUpperCase()),
-      partnerColor: partner.auraColor,
+      partnerColor: partnerPinColor,
       partnerSharing: partnerLoc.isSharing,
     });
     webViewRef.current.injectJavaScript(`window.updatePositions(${payload}); true;`);
   }, [
     mapReady,
-    me.auraColor,
     me.name,
     myLoc.isSharing,
     myLoc.latitude,
     myLoc.longitude,
-    partner.auraColor,
+    myPinColor,
     partner.name,
     partnerLoc.isSharing,
     partnerLoc.latitude,
     partnerLoc.longitude,
+    partnerPinColor,
   ]);
 
   const distanceText = formatDistanceId(
@@ -270,22 +288,27 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
     <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.distancePill}>
-          <Navigation size={13} color={Pastel.coralDark} />
+          <Navigation size={12} color={Pastel.coralDark} />
           <Text style={styles.distancePillText}>
-            {bothSharing ? `Jarak kalian: ${distanceText}` : 'Mode Privasi Aktif'}
+            {bothSharing ? `JARAK ${distanceText.toUpperCase()}` : 'MODE PRIVASI'}
           </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={styles.topRightRow}>
           <BouncyPressable onPress={handleToggleStyle} style={styles.styleTogglePill}>
+            {mapStyle === 'street' ? (
+              <Globe size={12} color={Pastel.text} />
+            ) : (
+              <MapIcon size={12} color={Pastel.text} />
+            )}
             <Text style={styles.styleToggleText}>
-              {mapStyle === 'street' ? '🛰️ Satelit' : '🗺️ Jalan'}
+              {mapStyle === 'street' ? 'Satelit' : 'Peta'}
             </Text>
           </BouncyPressable>
 
           <View style={styles.liveTag}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveTagText}>Live</Text>
+            <Text style={styles.liveTagText}>LIVE</Text>
           </View>
         </View>
       </View>
@@ -293,7 +316,7 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
       <View style={styles.mapFrame}>
         {Platform.OS === 'web' ? (
           <View style={styles.webFallback}>
-            <Text style={styles.fallbackTitle}>Peta Interaktif Tersedia di Aplikasi Android</Text>
+            <Text style={styles.fallbackTitle}>Peta Interaktif Tersedia di Android</Text>
             <Text style={styles.fallbackSub}>
               {me.name}: {myLoc.latitude.toFixed(4)}, {myLoc.longitude.toFixed(4)}
               {'\n'}
@@ -304,7 +327,7 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
           <View style={styles.webFallback}>
             <Text style={styles.fallbackTitle}>Peta butuh koneksi internet</Text>
             <Text style={styles.fallbackSub}>
-              Cek koneksi internet atau beralih ke tab Radar Mochi di atas.
+              Cek koneksi atau beralih ke tab Radar Kompas di atas.
             </Text>
             <BouncyPressable
               onPress={() => {
@@ -312,8 +335,8 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
                 setReloadKey((k) => k + 1);
               }}
               style={styles.retryBtn}>
-              <RefreshCw size={14} color={Pastel.white} />
-              <Text style={styles.retryText}>Muat Ulang Peta</Text>
+              <RefreshCw size={14} color={Pastel.pureWhite} />
+              <Text style={styles.retryText}>Muat Ulang</Text>
             </BouncyPressable>
           </View>
         ) : (
@@ -335,17 +358,17 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
 
       <View style={styles.controlsRow}>
         <BouncyPressable onPress={handleFitBoth} style={styles.mapCtrlBtn}>
-          <Users size={13} color="#5B43D6" />
-          <Text style={styles.mapCtrlText}>Lihat Berdua</Text>
+          <Users size={13} color={Pastel.text} />
+          <Text style={styles.mapCtrlText}>Berdua</Text>
         </BouncyPressable>
         <BouncyPressable onPress={handleFocusMe} style={styles.mapCtrlBtn}>
-          <Crosshair size={13} color="#178C68" />
-          <Text style={[styles.mapCtrlText, { color: '#178C68' }]}>{me.name}</Text>
+          <Crosshair size={13} color={myPinColor} />
+          <Text style={[styles.mapCtrlText, { color: myPinColor }]}>{me.name}</Text>
         </BouncyPressable>
         {partnerLoc.isSharing ? (
           <BouncyPressable onPress={handleFocusPartner} style={styles.mapCtrlBtn}>
-            <Crosshair size={13} color={Pastel.coralDark} />
-            <Text style={[styles.mapCtrlText, { color: Pastel.coralDark }]}>
+            <Crosshair size={13} color={partnerPinColor} />
+            <Text style={[styles.mapCtrlText, { color: partnerPinColor }]}>
               {partner.name}
             </Text>
           </BouncyPressable>
@@ -357,16 +380,11 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Pastel.white,
-    borderRadius: 28,
-    padding: 14,
-    borderWidth: 2,
-    borderColor: Pastel.border,
-    shadowColor: '#D9A7B8',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 12,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     gap: 10,
   },
   topRow: {
@@ -375,63 +393,74 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
+  topRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   distancePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     backgroundColor: Pastel.coralSoft,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E8C5BB',
   },
   distancePillText: {
-    fontFamily: RoundedFont,
-    fontSize: 12.5,
-    fontWeight: '800',
+    fontFamily: MonoFontBold,
+    fontSize: 10.5,
     color: Pastel.coralDark,
+    letterSpacing: 0.4,
   },
   liveTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     backgroundColor: Pastel.matchaSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C2D5C7',
   },
   liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#178C68',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Pastel.matcha,
   },
   liveTagText: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#178C68',
+    fontFamily: MonoFontBold,
+    fontSize: 10,
+    color: Pastel.matcha,
+    letterSpacing: 0.6,
   },
   styleTogglePill: {
-    backgroundColor: Pastel.taroSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Pastel.bg,
     paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D6CCFF',
+    borderColor: Pastel.borderStrong,
   },
   styleToggleText: {
-    fontFamily: RoundedFont,
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#5B43D6',
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    color: Pastel.text,
   },
   mapFrame: {
     width: '100%',
-    height: 290,
-    borderRadius: 20,
+    height: 292,
+    borderRadius: 8,
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     backgroundColor: Pastel.bg,
   },
   webview: {
@@ -446,16 +475,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fallbackTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 14.5,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 16,
     color: Pastel.text,
     textAlign: 'center',
   },
   fallbackSub: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: MonoFont,
+    fontSize: 11.5,
     color: Pastel.textMuted,
     textAlign: 'center',
     lineHeight: 18,
@@ -464,17 +491,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Pastel.sky,
+    backgroundColor: Pastel.text,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 8,
     marginTop: 4,
   },
   retryText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 12.5,
-    fontWeight: '800',
-    color: Pastel.white,
+    color: Pastel.pureWhite,
   },
   controlsRow: {
     flexDirection: 'row',
@@ -487,15 +513,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: 8,
   },
   mapCtrlText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 12,
-    fontWeight: '800',
-    color: '#5B43D6',
+    color: Pastel.text,
   },
 });

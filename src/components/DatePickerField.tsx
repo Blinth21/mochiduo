@@ -202,7 +202,7 @@ export const DatePickerField = React.memo(function DatePickerField({
             onPress={() => setTypingMode(true)}
             style={styles.modeIconBtn}
             accessibilityLabel="Ketik tanggal manual">
-            <KeyboardIcon size={16} color="#5B43D6" />
+            <KeyboardIcon size={16} color={Pastel.text} />
           </BouncyPressable>
         </View>
       )}
@@ -212,7 +212,7 @@ export const DatePickerField = React.memo(function DatePickerField({
         onRequestClose={() => setPickerVisible(false)}
         maxHeightRatio={0.86}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Pilih Tanggal 📅</Text>
+          <Text style={styles.modalTitle}>Pilih Tanggal</Text>
           <BouncyPressable
             onPress={() => setPickerVisible(false)}
             style={styles.closeBtn}>
@@ -392,9 +392,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
@@ -402,15 +402,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: RoundedFont,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.text,
   },
   inlineInput: {
     flex: 1,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.taro,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Pastel.coral,
+    borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 10,
     fontFamily: RoundedFont,
@@ -420,10 +420,10 @@ const styles = StyleSheet.create({
   modeIconBtn: {
     width: 42,
     height: 42,
-    borderRadius: 14,
-    backgroundColor: Pastel.taroSoft,
-    borderWidth: 1.5,
-    borderColor: '#D6CCFF',
+    borderRadius: 12,
+    backgroundColor: Pastel.bgMuted,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -436,14 +436,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontFamily: RoundedFont,
     fontSize: 17.5,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Pastel.text,
   },
   closeBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    backgroundColor: Pastel.bg,
+    borderRadius: 10,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -454,15 +454,15 @@ const styles = StyleSheet.create({
   manualBox: {
     gap: 6,
     backgroundColor: Pastel.bg,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 10,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Pastel.border,
   },
   manualLabel: {
     fontFamily: RoundedFont,
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.textMuted,
   },
   manualRow: {
@@ -472,10 +472,10 @@ const styles = StyleSheet.create({
   },
   manualInput: {
     flex: 1,
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 12,
+    backgroundColor: Pastel.bgElevated,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 10,
     paddingHorizontal: 11,
     paddingVertical: 8,
     fontFamily: RoundedFont,
@@ -483,16 +483,16 @@ const styles = StyleSheet.create({
     color: Pastel.text,
   },
   applyBtn: {
-    backgroundColor: Pastel.taro,
+    backgroundColor: Pastel.text,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   applyBtnText: {
     fontFamily: RoundedFont,
     fontSize: 12.5,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontWeight: '700',
+    color: Pastel.pureWhite,
   },
   presetRow: {
     gap: 7,
@@ -500,16 +500,16 @@ const styles = StyleSheet.create({
   },
   presetChip: {
     backgroundColor: Pastel.coralSoft,
-    borderWidth: 1.5,
-    borderColor: '#FFC7D6',
+    borderWidth: 1,
+    borderColor: Pastel.coral + '55',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 8,
   },
   presetText: {
     fontFamily: RoundedFont,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.coralDark,
   },
   calNav: {
@@ -521,32 +521,32 @@ const styles = StyleSheet.create({
   navArrow: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthYearBtn: {
-    backgroundColor: Pastel.taroSoft,
-    borderWidth: 1.5,
-    borderColor: '#D6CCFF',
+    backgroundColor: Pastel.bgMuted,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 10,
   },
   monthYearText: {
     fontFamily: RoundedFont,
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#5B43D6',
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: Pastel.text,
   },
   calendarBox: {
     backgroundColor: Pastel.bg,
-    borderRadius: 18,
+    borderRadius: 14,
     padding: 10,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Pastel.border,
   },
   weekdayRow: {
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: RoundedFont,
     fontSize: 11.5,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Pastel.textMuted,
   },
   daysGrid: {
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1.15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 10,
   },
   dayCellSelected: {
     backgroundColor: Pastel.coral,
@@ -578,25 +578,25 @@ const styles = StyleSheet.create({
   dayText: {
     fontFamily: RoundedFont,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.text,
   },
   dayTextSelected: {
-    color: Pastel.white,
-    fontWeight: '800',
+    color: Pastel.pureWhite,
+    fontWeight: '700',
   },
   yearMonthContainer: {
     backgroundColor: Pastel.bg,
-    borderRadius: 18,
+    borderRadius: 14,
     padding: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Pastel.border,
     gap: 8,
   },
   subTitle: {
     fontFamily: RoundedFont,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Pastel.textMuted,
   },
   yearGrid: {
@@ -612,18 +612,18 @@ const styles = StyleSheet.create({
   yearCell: {
     width: '23%',
     paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
+    borderRadius: 10,
+    backgroundColor: Pastel.bgElevated,
+    borderWidth: 1,
     borderColor: Pastel.border,
     alignItems: 'center',
   },
   monthCell: {
     width: '23%',
     paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
+    borderRadius: 10,
+    backgroundColor: Pastel.bgElevated,
+    borderWidth: 1,
     borderColor: Pastel.border,
     alignItems: 'center',
   },
@@ -634,11 +634,11 @@ const styles = StyleSheet.create({
   yearCellText: {
     fontFamily: RoundedFont,
     fontSize: 12.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.text,
   },
   yearCellTextActive: {
-    color: Pastel.white,
-    fontWeight: '800',
+    color: Pastel.pureWhite,
+    fontWeight: '700',
   },
 });

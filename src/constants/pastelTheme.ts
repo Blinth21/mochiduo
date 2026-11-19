@@ -1,51 +1,89 @@
 import { Platform } from 'react-native';
 
+/**
+ * Artisanal Japanese Stationery & Editorial Monograph Design System for MochiDuo
+ * Grounded in Washi Ivory (#F7F3EB), Sumi Charcoal Ink (#1F1B18),
+ * Hanko Vermilion (#C84B31), Uji Matcha (#3A6B54), and Sepia Hairlines (#E2D9C8).
+ */
 export const Pastel = {
-  bg: '#FFF9F5',
-  bgElevated: '#FFFFFF',
-  border: '#F2E4DC',
-  borderStrong: '#E7D1C5',
+  bg: '#F7F3EB',
+  bgElevated: '#FCFBF8',
+  bgMuted: '#EFE9DC',
+  border: '#E2D9C8',
+  borderStrong: '#C9BDA7',
 
-  text: '#2D2235',
-  textMuted: '#786A80',
-  textSoft: '#A698AD',
+  text: '#1F1B18',
+  textMuted: '#6B6259',
+  textSoft: '#9A9086',
 
-  // Brand & Playful Accents
-  coral: '#FF6B8B',
-  coralDark: '#E64D70',
-  coralSoft: '#FFE8EE',
+  // Signature Hanko Vermilion (Primary Brand Seal)
+  coral: '#C84B31',
+  coralDark: '#A63821',
+  coralSoft: '#F9EAE4',
 
-  taro: '#8B74FF',
-  taroSoft: '#EFEAFF',
+  // Prussian Slate Indigo (Blueprint / Secondary Ink — zero neon purple)
+  taro: '#475B78',
+  taroSoft: '#E9EDF2',
 
-  matcha: '#2FC496',
-  matchaSoft: '#E3FAF2',
+  // Uji Matcha Sage (Live Sync / Location / Completion)
+  matcha: '#3A6B54',
+  matchaSoft: '#E7F0EA',
 
-  honey: '#FFB347',
-  honeySoft: '#FFF4DC',
+  // Amber Ochre (Warm Culinary / Highlights)
+  honey: '#B87D28',
+  honeySoft: '#FBF1DD',
 
-  sky: '#4FB3FF',
-  skySoft: '#E5F4FF',
+  // Misty Slate (Travel / Calm)
+  sky: '#436E85',
+  skySoft: '#E8EFF2',
 
-  peach: '#FF9472',
-  peachSoft: '#FFEDE5',
+  // Baked Clay
+  peach: '#B85D43',
+  peachSoft: '#F8EAE5',
 
-  lemonSoft: '#FFF9D6',
-  white: '#FFFFFF',
+  lemonSoft: '#FAF4DF',
+  white: '#FCFBF8',
+  pureWhite: '#FFFFFF',
 } as const;
 
+export const SerifFont = Platform.select({
+  web: "'Newsreader', Georgia, serif",
+  default: 'Newsreader_500Medium',
+});
+
+export const SerifFontSemi = Platform.select({
+  web: "'Newsreader', Georgia, serif",
+  default: 'Newsreader_600SemiBold',
+});
+
+export const BodyFontRegular = Platform.select({
+  web: "'Plus Jakarta Sans', system-ui, sans-serif",
+  default: 'PlusJakartaSans_400Regular',
+});
+
 export const RoundedFont = Platform.select({
-  ios: 'ui-rounded',
-  android: 'sans-serif-medium',
-  web: "'Nunito', 'Quicksand', 'SF Pro Rounded', ui-rounded, system-ui, sans-serif",
-  default: 'System',
+  web: "'Plus Jakarta Sans', system-ui, sans-serif",
+  default: 'PlusJakartaSans_500Medium',
+});
+
+export const BodyFontSemi = Platform.select({
+  web: "'Plus Jakarta Sans', system-ui, sans-serif",
+  default: 'PlusJakartaSans_600SemiBold',
+});
+
+export const BodyFontBold = Platform.select({
+  web: "'Plus Jakarta Sans', system-ui, sans-serif",
+  default: 'PlusJakartaSans_700Bold',
 });
 
 export const MonoFont = Platform.select({
-  ios: 'ui-monospace',
-  android: 'monospace',
-  web: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  default: 'monospace',
+  web: "'JetBrains Mono', ui-monospace, monospace",
+  default: 'JetBrainsMono_500Medium',
+});
+
+export const MonoFontBold = Platform.select({
+  web: "'JetBrains Mono', ui-monospace, monospace",
+  default: 'JetBrainsMono_700Bold',
 });
 
 export interface MoodOption {
@@ -60,73 +98,73 @@ export interface MoodOption {
 export const MOOD_OPTIONS: MoodOption[] = [
   {
     id: 'in_love',
-    emoji: '🥰',
+    emoji: '♥',
     label: 'Bucin',
     accent: Pastel.coral,
     bg: Pastel.coralSoft,
-    defaultStatus: 'Lagi sayang banget sama kamu!',
+    defaultStatus: 'Lagi kepikiran kamu terus hari ini.',
   },
   {
     id: 'miss_you',
-    emoji: '🥺',
+    emoji: '☁',
     label: 'Kangen',
     accent: Pastel.taro,
     bg: Pastel.taroSoft,
-    defaultStatus: 'Kangen... kapan ketemu lagi?',
+    defaultStatus: 'Kangen, kapan kita ketemu lagi?',
   },
   {
     id: 'happy',
-    emoji: '✨',
+    emoji: '☀',
     label: 'Happy',
     accent: Pastel.matcha,
     bg: Pastel.matchaSoft,
-    defaultStatus: 'Mood hari ini cerah banget!',
+    defaultStatus: 'Hari ini terasa ringan dan cerah.',
   },
   {
     id: 'hungry',
-    emoji: '🧋',
+    emoji: '🍵',
     label: 'Lapar',
     accent: Pastel.honey,
     bg: Pastel.honeySoft,
-    defaultStatus: 'Pengen jajan boba atau seblak~',
+    defaultStatus: 'Lagi pengen cari makan hangat bareng.',
   },
   {
     id: 'sleepy',
-    emoji: '😴',
+    emoji: '☾',
     label: 'Ngantuk',
     accent: Pastel.sky,
     bg: Pastel.skySoft,
-    defaultStatus: 'Lowbat nih, butuh peluk dulu...',
+    defaultStatus: 'Energi menipis, butuh istirahat sebentar.',
   },
   {
     id: 'chaotic',
-    emoji: '🤪',
+    emoji: '⚡',
     label: 'Random',
     accent: Pastel.peach,
     bg: Pastel.peachSoft,
-    defaultStatus: 'Otak lagi mode kocak hari ini!',
+    defaultStatus: 'Lagi banyak ide random di kepala.',
   },
 ];
 
 export const MEMORY_TAGS = [
-  { id: 'all', label: 'Semua', emoji: '🌈', bg: Pastel.bgElevated, accent: Pastel.text },
-  { id: 'date', label: 'Kencan', emoji: '💕', bg: Pastel.coralSoft, accent: Pastel.coral },
-  { id: 'food', label: 'Kuliner', emoji: '🍜', bg: Pastel.honeySoft, accent: '#D97B00' },
-  { id: 'trip', label: 'Trip', emoji: '🛵', bg: Pastel.skySoft, accent: '#1B82D6' },
-  { id: 'random', label: 'Random', emoji: '📸', bg: Pastel.taroSoft, accent: Pastel.taro },
+  { id: 'all', label: 'Semua', emoji: 'Semua', bg: Pastel.bgMuted, accent: Pastel.text },
+  { id: 'date', label: 'Kencan', emoji: 'Kencan', bg: Pastel.coralSoft, accent: Pastel.coralDark },
+  { id: 'food', label: 'Kuliner', emoji: 'Kuliner', bg: Pastel.honeySoft, accent: '#8E5D15' },
+  { id: 'trip', label: 'Trip', emoji: 'Trip', bg: Pastel.skySoft, accent: Pastel.sky },
+  { id: 'random', label: 'Random', emoji: 'Random', bg: Pastel.taroSoft, accent: Pastel.taro },
 ] as const;
 
 export const BUCKET_CATEGORIES = [
-  { id: 'hangout', label: 'Jalan-jalan', emoji: '🎡', bg: Pastel.skySoft, accent: '#1B82D6' },
-  { id: 'food', label: 'Kulineran', emoji: '🍰', bg: Pastel.honeySoft, accent: '#D97B00' },
-  { id: 'cozy', label: 'Cozy di Rumah', emoji: '🍿', bg: Pastel.taroSoft, accent: Pastel.taro },
-  { id: 'milestone', label: 'Impian Besar', emoji: '🌟', bg: Pastel.coralSoft, accent: Pastel.coral },
+  { id: 'hangout', label: 'Jalan-jalan', emoji: 'Jalan', bg: Pastel.skySoft, accent: Pastel.sky },
+  { id: 'food', label: 'Kulineran', emoji: 'Kuliner', bg: Pastel.honeySoft, accent: '#8E5D15' },
+  { id: 'cozy', label: 'Cozy di Rumah', emoji: 'Cozy', bg: Pastel.matchaSoft, accent: Pastel.matcha },
+  { id: 'milestone', label: 'Impian Besar', emoji: 'Impian', bg: Pastel.coralSoft, accent: Pastel.coralDark },
 ] as const;
 
 export const NOTE_PALETTES = [
-  { id: 'pink', bg: '#FFE8F0', border: '#FFC7DC', accent: '#E64D70', label: 'Strawberry' },
-  { id: 'lemon', bg: '#FFF7D6', border: '#FBE594', accent: '#C68500', label: 'Butter' },
-  { id: 'lavender', bg: '#EFEAFF', border: '#D4C7FF', accent: '#6F54F5', label: 'Taro' },
-  { id: 'mint', bg: '#E3FAF2', border: '#B5EED9', accent: '#199E74', label: 'Matcha' },
-  { id: 'peach', bg: '#FFEDE5', border: '#FFD1BD', accent: '#DF643B', label: 'Peach' },
+  { id: 'pink', bg: '#FBF1EE', border: '#E4C7BE', accent: '#A63821', label: 'Persimmon' },
+  { id: 'lemon', bg: '#FAF4DF', border: '#E3D5A9', accent: '#8C621B', label: 'Kinari' },
+  { id: 'lavender', bg: '#ECEFF4', border: '#C7D0DC', accent: '#3F526D', label: 'Slate' },
+  { id: 'mint', bg: '#EBF2ED', border: '#C2D5C7', accent: '#2E5A45', label: 'Matcha' },
+  { id: 'peach', bg: '#F7EFE8', border: '#DFC7B6', accent: '#9B4D35', label: 'Clay' },
 ] as const;

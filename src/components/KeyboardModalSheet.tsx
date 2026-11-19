@@ -81,18 +81,20 @@ export const KeyboardModalSheet = React.memo(function KeyboardModalSheet({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(45, 34, 53, 0.45)',
+    backgroundColor: 'rgba(31, 27, 24, 0.48)',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
   card: {
     width: '100%',
     maxWidth: 520,
-    backgroundColor: Pastel.white,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 20,
-    borderTopWidth: 2,
-    borderColor: Pastel.border,
+    backgroundColor: Pastel.bgElevated,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
 });

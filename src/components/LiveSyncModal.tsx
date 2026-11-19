@@ -194,7 +194,7 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
                 style={[styles.input, { flex: 1 }]}
               />
               <BouncyPressable onPress={handleGenerateCode} style={styles.genBtn}>
-                <RefreshCw size={15} color="#5B43D6" />
+                <RefreshCw size={15} color={Pastel.text} />
                 <Text style={styles.genBtnText}>Acak</Text>
               </BouncyPressable>
             </View>
@@ -232,9 +232,9 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
               disabled={loading}
               style={[styles.connectBtn, loading && { opacity: 0.7 }]}>
               {loading ? (
-                <ActivityIndicator size="small" color={Pastel.white} />
+                <ActivityIndicator size="small" color={Pastel.pureWhite} />
               ) : (
-                <Sparkles size={16} color={Pastel.white} />
+                <Sparkles size={16} color={Pastel.pureWhite} />
               )}
               <Text style={styles.connectBtnText}>
                 {loading
@@ -261,7 +261,7 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
                 2. Buka SQL Editor di Supabase → jalankan isi file supabase/schema.sql.
               </Text>
               <Text style={styles.guideStep}>
-                3. Copy Project URL & Anon Key di Project Settings → API, lalu masukkan Kode Pasangan yang sama di HP 1 & HP 2!
+                3. Copy Project URL &amp; Anon Key di Project Settings → API, lalu masukkan Kode Pasangan yang sama di HP 1 &amp; HP 2.
               </Text>
             </View>
           </ScrollView>
@@ -270,23 +270,6 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
 });
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(45, 34, 53, 0.45)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 520,
-    maxHeight: '90%',
-    backgroundColor: Pastel.white,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 20,
-    borderTopWidth: 2,
-    borderColor: Pastel.border,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -301,14 +284,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: RoundedFont,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Pastel.text,
   },
   closeBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    backgroundColor: Pastel.bg,
+    borderRadius: 10,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -321,28 +304,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     padding: 11,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   statusConnected: {
     backgroundColor: Pastel.matchaSoft,
-    borderColor: '#B5EED9',
+    borderColor: Pastel.matcha + '44',
   },
   statusOffline: {
     backgroundColor: Pastel.bg,
-    borderColor: Pastel.border,
+    borderColor: Pastel.borderStrong,
   },
   statusText: {
     flex: 1,
     fontFamily: RoundedFont,
     fontSize: 12.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.textMuted,
   },
   label: {
     fontFamily: RoundedFont,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: Pastel.textMuted,
     marginTop: 2,
   },
@@ -357,9 +340,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 12,
     paddingVertical: 10,
   },
   roleChipActive: {
@@ -379,9 +362,9 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontFamily: RoundedFont,
@@ -392,23 +375,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Pastel.taroSoft,
-    borderWidth: 1.5,
-    borderColor: '#D6CCFF',
+    backgroundColor: Pastel.bgMuted,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     paddingHorizontal: 13,
     paddingVertical: 11,
-    borderRadius: 16,
+    borderRadius: 12,
   },
   genBtnText: {
     fontFamily: RoundedFont,
     fontSize: 13,
-    fontWeight: '800',
-    color: '#5B43D6',
+    fontWeight: '700',
+    color: Pastel.text,
   },
   feedbackText: {
     fontFamily: RoundedFont,
     fontSize: 12.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.coralDark,
     textAlign: 'center',
   },
@@ -417,50 +400,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    backgroundColor: Pastel.taro,
-    borderRadius: 18,
+    backgroundColor: Pastel.text,
+    borderRadius: 12,
     paddingVertical: 14,
     marginTop: 4,
   },
   connectBtnText: {
     fontFamily: RoundedFont,
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Pastel.pureWhite,
   },
   disconnectBtn: {
     alignItems: 'center',
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
   disconnectBtnText: {
     fontFamily: RoundedFont,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Pastel.textMuted,
   },
   guideBox: {
     backgroundColor: Pastel.lemonSoft,
-    borderRadius: 18,
+    borderRadius: 12,
     padding: 13,
-    borderWidth: 1.5,
-    borderColor: '#FBE594',
+    borderWidth: 1,
+    borderColor: '#E3D5A9',
     gap: 4,
     marginTop: 4,
   },
   guideTitle: {
     fontFamily: RoundedFont,
     fontSize: 12.5,
-    fontWeight: '800',
-    color: '#A96B00',
+    fontWeight: '700',
+    color: '#8C621B',
   },
   guideStep: {
     fontFamily: RoundedFont,
     fontSize: 11.5,
-    fontWeight: '600',
     color: Pastel.text,
     lineHeight: 16.5,
   },

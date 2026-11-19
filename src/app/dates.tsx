@@ -27,7 +27,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { DatePickerField } from '@/components/DatePickerField';
 import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
-import { BUCKET_CATEGORIES, Pastel, RoundedFont } from '@/constants/pastelTheme';
+import {
+  BUCKET_CATEGORIES,
+  BodyFontBold,
+  BodyFontSemi,
+  MonoFont,
+  MonoFontBold,
+  Pastel,
+  RoundedFont,
+  SerifFontSemi,
+} from '@/constants/pastelTheme';
 import { CURATED_DATE_IDEAS, useCoupleStore } from '@/store/useCoupleStore';
 import type { BucketCategory, BucketItem } from '@/types/couple';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
@@ -64,7 +73,7 @@ const BucketRow = React.memo(function BucketRow({
           styles.checkbox,
           item.done && { backgroundColor: Pastel.matcha, borderColor: Pastel.matcha },
         ]}>
-        {item.done ? <Check size={15} color={Pastel.white} strokeWidth={3} /> : null}
+        {item.done ? <Check size={14} color={Pastel.pureWhite} strokeWidth={3} /> : null}
       </BouncyPressable>
 
       <View style={styles.bucketBody}>
@@ -75,13 +84,13 @@ const BucketRow = React.memo(function BucketRow({
         <View style={styles.bucketMetaRow}>
           <View style={[styles.catBadge, { backgroundColor: cat.bg }]}>
             <Text style={[styles.catBadgeText, { color: cat.accent }]}>
-              {cat.emoji} {cat.label}
+              {cat.label.toUpperCase()}
             </Text>
           </View>
 
           {item.targetDate ? (
             <View style={styles.dateBadge}>
-              <Calendar size={11} color={Pastel.textMuted} />
+              <Calendar size={10} color={Pastel.textMuted} />
               <Text style={styles.dateBadgeText}>{item.targetDate}</Text>
             </View>
           ) : null}
@@ -127,8 +136,8 @@ export default function DatesScreen() {
     triggerMediumHaptic();
     spinScale.set(
       withSequence(
-        withSpring(0.95, { damping: 12, stiffness: 320 }),
-        withSpring(1, { damping: 10, stiffness: 260 })
+        withSpring(0.96, { damping: 14, stiffness: 320 }),
+        withSpring(1, { damping: 12, stiffness: 260 })
       )
     );
     setIdeaIndex((prev) => {
@@ -141,9 +150,9 @@ export default function DatesScreen() {
   const handleAddIdeaToBucket = useCallback(() => {
     triggerSuccessHaptic();
     addBucketItem({
-      title: `${currentIdea.emoji} ${currentIdea.title}`,
+      title: currentIdea.title,
       category: currentIdea.category,
-      targetDate: 'Segera!',
+      targetDate: 'Segera',
       createdBy: activePartnerId,
     });
   }, [activePartnerId, addBucketItem, currentIdea]);
@@ -210,39 +219,41 @@ export default function DatesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* Header */}
+        {/* Editorial Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.pageTitle}>Kencan & Bucket List 🎡</Text>
+            <Text style={styles.pageTitle}>Kencan & Bucket List</Text>
             <Text style={styles.pageSub}>
-              {doneCount} / {totalCount} misi kencan tercapai ({progressPct}%)
+              {doneCount}/{totalCount} TERCAPAI • {progressPct}% SELESAI
             </Text>
           </View>
 
           <BouncyPressable
             onPress={() => setModalVisible(true)}
             style={styles.addBtn}>
-            <Plus size={16} color={Pastel.white} />
+            <Plus size={15} color={Pastel.pureWhite} />
             <Text style={styles.addBtnText}>Rencana</Text>
           </BouncyPressable>
         </View>
 
-        {/* Progress Bar */}
+        {/* Precision Ledger Progress Bar */}
         <View style={styles.progressTrack}>
           <View
             style={[
               styles.progressFill,
-              { width: `${Math.max(6, progressPct)}%` },
+              { width: `${Math.max(4, progressPct)}%` },
             ]}
           />
         </View>
 
-        {/* Random Date Idea Spinner Card */}
+        {/* Random Date Idea Prompt Card */}
         <Animated.View style={[styles.rouletteCard, spinAnimStyle]}>
           <View style={styles.rouletteTop}>
             <View style={styles.roulettePill}>
-              <Sparkles size={13} color="#C67600" />
-              <Text style={styles.roulettePillText}>Ide Kencan Acak • {currentIdea.vibe}</Text>
+              <Sparkles size={11} color="#8E5D15" />
+              <Text style={styles.roulettePillText}>
+                IDE KENCAN ACAK • {currentIdea.vibe.toUpperCase()}
+              </Text>
             </View>
             <Text style={styles.rouletteEmoji}>{currentIdea.emoji}</Text>
           </View>
@@ -251,20 +262,20 @@ export default function DatesScreen() {
 
           <View style={styles.rouletteActions}>
             <BouncyPressable onPress={handleSpinIdea} style={styles.spinBtn}>
-              <Dices size={15} color="#C67600" />
+              <Dices size={14} color={Pastel.text} />
               <Text style={styles.spinBtnText}>Acak Ide</Text>
             </BouncyPressable>
 
             <BouncyPressable
               onPress={handleAddIdeaToBucket}
               style={styles.acceptIdeaBtn}>
-              <Plus size={15} color={Pastel.white} />
-              <Text style={styles.acceptIdeaText}>Masuk List!</Text>
+              <Plus size={14} color={Pastel.pureWhite} />
+              <Text style={styles.acceptIdeaText}>Masuk List</Text>
             </BouncyPressable>
           </View>
         </Animated.View>
 
-        {/* Filter Tabs */}
+        {/* Segmented Filter Tabs */}
         <View style={styles.filterRow}>
           {[
             { id: 'all', label: `Semua (${totalCount})` },
@@ -299,10 +310,9 @@ export default function DatesScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyEmoji}>🎯</Text>
                 <Text style={styles.emptyTitle}>Belum ada daftar di sini</Text>
                 <Text style={styles.emptySub}>
-                  Coba spin ide kencan di atas atau tambahkan impian kalian!
+                  Acak ide kencan di atas atau tambahkan rencana baru berdua.
                 </Text>
               </View>
             }
@@ -315,7 +325,7 @@ export default function DatesScreen() {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Tambah Rencana Kencan 🎡</Text>
+          <Text style={styles.modalTitle}>Tambah Rencana Kencan</Text>
           <BouncyPressable
             onPress={() => setModalVisible(false)}
             style={styles.modalCloseBtn}>
@@ -327,16 +337,16 @@ export default function DatesScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.modalBody}>
-          <Text style={styles.inputLabel}>Mau Ngapain Nih? *</Text>
+          <Text style={styles.inputLabel}>Rencana Kegiatan *</Text>
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder="Misal: Cobain kafe kucing bareng"
+            placeholder="Misal: Cobain kedai kopi kecil berdua"
             placeholderTextColor={Pastel.textSoft}
             style={styles.modalInput}
           />
 
-          <Text style={styles.inputLabel}>Kapan? (Pilih Kalender atau Ketik)</Text>
+          <Text style={styles.inputLabel}>Waktu (Pilih Kalender atau Ketik)</Text>
           <DatePickerField
             value={targetDate}
             onChange={setTargetDate}
@@ -358,11 +368,10 @@ export default function DatesScreen() {
                     styles.catChoice,
                     selected && { backgroundColor: c.bg, borderColor: c.accent },
                   ]}>
-                  <Text style={styles.catChoiceEmoji}>{c.emoji}</Text>
                   <Text
                     style={[
                       styles.catChoiceLabel,
-                      selected && { color: c.accent, fontWeight: '800' },
+                      selected && { color: c.accent, fontFamily: BodyFontBold },
                     ]}>
                     {c.label}
                   </Text>
@@ -373,8 +382,8 @@ export default function DatesScreen() {
 
           <BouncyPressable
             onPress={handleCreateBucket}
-            style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}>
-            <Text style={styles.saveBtnText}>Masukkan ke Bucket List ✨</Text>
+            style={[styles.saveBtn, !title.trim() && { opacity: 0.45 }]}>
+            <Text style={styles.saveBtnText}>Masukkan ke Bucket List</Text>
           </BouncyPressable>
         </ScrollView>
       </KeyboardModalSheet>
@@ -402,57 +411,50 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pageTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 25,
     color: Pastel.text,
   },
   pageSub: {
-    fontFamily: RoundedFont,
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: MonoFont,
+    fontSize: 10.5,
     color: Pastel.textMuted,
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Pastel.honey,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    shadowColor: Pastel.honey,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Pastel.text,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
   addBtnText: {
-    fontFamily: RoundedFont,
-    fontSize: 13.5,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    color: Pastel.pureWhite,
   },
   progressTrack: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    height: 6,
+    borderRadius: 4,
+    backgroundColor: Pastel.bgMuted,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     overflow: 'hidden',
     marginBottom: 14,
   },
   progressFill: {
     height: '100%',
-    borderRadius: 999,
     backgroundColor: Pastel.matcha,
   },
   rouletteCard: {
     backgroundColor: Pastel.honeySoft,
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 15,
-    borderWidth: 2,
-    borderColor: '#FFE0A3',
+    borderWidth: 1,
+    borderColor: '#DFCA9E',
     marginBottom: 14,
     gap: 10,
   },
@@ -465,25 +467,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Pastel.white,
-    paddingHorizontal: 10,
+    backgroundColor: Pastel.bgElevated,
+    paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DFCA9E',
   },
   roulettePillText: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#C67600',
+    fontFamily: MonoFontBold,
+    fontSize: 9.5,
+    color: '#8E5D15',
+    letterSpacing: 0.5,
   },
   rouletteEmoji: {
-    fontSize: 22,
+    fontSize: 20,
   },
   rouletteTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 18.5,
     color: Pastel.text,
+    lineHeight: 24,
   },
   rouletteActions: {
     flexDirection: 'row',
@@ -495,17 +499,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Pastel.white,
+    backgroundColor: Pastel.bgElevated,
     paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#FFD685',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
   spinBtnText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 13,
-    fontWeight: '800',
-    color: '#C67600',
+    color: Pastel.text,
   },
   acceptIdeaBtn: {
     flex: 1,
@@ -515,41 +518,42 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: Pastel.coral,
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: 8,
   },
   acceptIdeaText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 13,
-    fontWeight: '800',
-    color: Pastel.white,
+    color: Pastel.pureWhite,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
+    backgroundColor: Pastel.bgMuted,
+    padding: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    gap: 4,
+    marginBottom: 12,
   },
   filterTab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    paddingVertical: 7,
+    borderRadius: 7,
   },
   filterTabActive: {
-    backgroundColor: Pastel.matchaSoft,
-    borderColor: Pastel.matcha,
+    backgroundColor: Pastel.bgElevated,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
   filterTabText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 12,
-    fontWeight: '700',
     color: Pastel.textMuted,
   },
   filterTabTextActive: {
-    color: '#178C68',
-    fontWeight: '800',
+    fontFamily: BodyFontBold,
+    color: Pastel.text,
   },
   listFlex: {
     flex: 1,
@@ -562,22 +566,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: Pastel.white,
-    borderRadius: 20,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 10,
     padding: 13,
-    borderWidth: 2,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     marginBottom: 10,
   },
   bucketCardDone: {
-    backgroundColor: '#FAFBF9',
-    opacity: 0.84,
+    backgroundColor: Pastel.bg,
+    borderColor: Pastel.border,
+    opacity: 0.78,
   },
   checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 9,
-    borderWidth: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1.5,
     borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
@@ -588,9 +593,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bucketTitle: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 14.5,
-    fontWeight: '700',
     color: Pastel.text,
   },
   bucketTitleDone: {
@@ -604,61 +608,59 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   catBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 5,
   },
   catBadgeText: {
-    fontFamily: RoundedFont,
-    fontSize: 11,
-    fontWeight: '800',
+    fontFamily: MonoFontBold,
+    fontSize: 9.5,
+    letterSpacing: 0.4,
   },
   dateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     backgroundColor: Pastel.bg,
+    borderWidth: 1,
+    borderColor: Pastel.border,
     paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 999,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
   dateBadgeText: {
-    fontFamily: RoundedFont,
-    fontSize: 11,
-    fontWeight: '600',
+    fontFamily: MonoFont,
+    fontSize: 10,
     color: Pastel.textMuted,
   },
   authorHint: {
     fontFamily: RoundedFont,
     fontSize: 11,
-    fontWeight: '600',
     color: Pastel.textSoft,
   },
   deleteBtn: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 7,
     backgroundColor: Pastel.bg,
+    borderWidth: 1,
+    borderColor: Pastel.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyBox: {
-    backgroundColor: Pastel.white,
-    borderRadius: 24,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 12,
     padding: 26,
     alignItems: 'center',
     gap: 6,
-    borderWidth: 2,
-    borderColor: Pastel.border,
-    marginTop: 16,
-  },
-  emptyEmoji: {
-    fontSize: 34,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    marginTop: 12,
   },
   emptyTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 15,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 16,
     color: Pastel.text,
   },
   emptySub: {
@@ -667,23 +669,6 @@ const styles = StyleSheet.create({
     color: Pastel.textMuted,
     textAlign: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(45, 34, 53, 0.42)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 520,
-    maxHeight: '85%',
-    backgroundColor: Pastel.white,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 20,
-    borderTopWidth: 2,
-    borderColor: Pastel.border,
-  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -691,16 +676,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 18,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 20,
     color: Pastel.text,
   },
   modalCloseBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 8,
     backgroundColor: Pastel.bg,
+    borderWidth: 1,
+    borderColor: Pastel.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -709,17 +695,18 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   inputLabel: {
-    fontFamily: RoundedFont,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: MonoFontBold,
+    fontSize: 10,
     color: Pastel.textMuted,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
     marginTop: 4,
   },
   modalInput: {
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontFamily: RoundedFont,
@@ -732,36 +719,28 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   catChoice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
-  },
-  catChoiceEmoji: {
-    fontSize: 14,
+    borderRadius: 8,
   },
   catChoiceLabel: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 12.5,
-    fontWeight: '600',
     color: Pastel.textMuted,
   },
   saveBtn: {
     backgroundColor: Pastel.coral,
-    borderRadius: 18,
+    borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 10,
   },
   saveBtnText: {
-    fontFamily: RoundedFont,
-    fontSize: 15,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontFamily: BodyFontBold,
+    fontSize: 14.5,
+    color: Pastel.pureWhite,
   },
 });

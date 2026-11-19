@@ -29,7 +29,15 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { LiveSyncModal } from '@/components/LiveSyncModal';
-import { Pastel, RoundedFont } from '@/constants/pastelTheme';
+import {
+  BodyFontBold,
+  BodyFontSemi,
+  MonoFont,
+  MonoFontBold,
+  Pastel,
+  RoundedFont,
+  SerifFontSemi,
+} from '@/constants/pastelTheme';
 import { broadcastTyping } from '@/services/coupleSync';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { ChatMessage, PartnerId } from '@/types/couple';
@@ -104,10 +112,14 @@ const MessageBubble = React.memo(function MessageBubble({
               styles.replyQuote,
               isMine ? styles.replyQuoteMine : styles.replyQuotePartner,
             ]}>
-            <Text style={styles.replyQuoteAuthor} numberOfLines={1}>
+            <Text
+              style={[styles.replyQuoteAuthor, isMine && { color: Pastel.pureWhite }]}
+              numberOfLines={1}>
               {replyAuthor}
             </Text>
-            <Text style={styles.replyQuoteText} numberOfLines={2}>
+            <Text
+              style={[styles.replyQuoteText, isMine && { color: 'rgba(255,255,255,0.8)' }]}
+              numberOfLines={2}>
               {msg.replyToPreview}
             </Text>
           </View>
@@ -138,18 +150,18 @@ const MessageBubble = React.memo(function MessageBubble({
             hitSlop={8}
             withHaptic={false}
             style={styles.quickReplyIcon}>
-            <Reply size={11} color={isMine ? 'rgba(255,255,255,0.75)' : Pastel.textSoft} />
+            <Reply size={11} color={isMine ? 'rgba(255,255,255,0.72)' : Pastel.textSoft} />
           </BouncyPressable>
           <Text style={[styles.timeText, isMine && styles.timeTextMine]}>
             {formatTimeHHMM(msg.createdAt)}
           </Text>
           {isMine ? (
             msg.status === 'sent' ? (
-              <Check size={13} color="rgba(255,255,255,0.8)" />
+              <Check size={13} color="rgba(255,255,255,0.78)" />
             ) : (
               <CheckCheck
                 size={13}
-                color={msg.status === 'read' ? '#B9FFF0' : 'rgba(255,255,255,0.85)'}
+                color={msg.status === 'read' ? '#A7E6C5' : 'rgba(255,255,255,0.85)'}
               />
             )
           ) : null}
@@ -193,6 +205,7 @@ export default function ChatScreen() {
   const isPartnerTyping = partnerTyping[partnerId];
   const isPartnerOnline = onlinePartners[partnerId];
   const isLive = syncConfig.enabled && syncStatus === 'connected';
+  const partnerInitialBg = partnerId === 'p1' ? Pastel.coral : Pastel.matcha;
 
   const [inputText, setInputText] = useState('');
   const [showStickers, setShowStickers] = useState(false);
@@ -275,7 +288,7 @@ export default function ChatScreen() {
             senderId: replyTarget.senderId,
             preview:
               replyTarget.text ||
-              (replyTarget.sticker ? `${replyTarget.sticker} Stiker` : '📷 Foto'),
+              (replyTarget.sticker ? `${replyTarget.sticker} Stiker` : 'Foto'),
           }
         : undefined,
     });
@@ -295,7 +308,7 @@ export default function ChatScreen() {
           ? {
               id: replyTarget.id,
               senderId: replyTarget.senderId,
-              preview: replyTarget.text || replyTarget.sticker || '📷 Foto',
+              preview: replyTarget.text || replyTarget.sticker || 'Foto',
             }
           : undefined,
       });
@@ -328,7 +341,7 @@ export default function ChatScreen() {
           ? {
               id: replyTarget.id,
               senderId: replyTarget.senderId,
-              preview: replyTarget.text || replyTarget.sticker || '📷 Foto',
+              preview: replyTarget.text || replyTarget.sticker || 'Foto',
             }
           : undefined,
       });
@@ -353,9 +366,11 @@ export default function ChatScreen() {
       if (item.type === 'date') {
         return (
           <View style={styles.dateDividerWrap}>
+            <View style={styles.dateRule} />
             <View style={styles.dateDividerPill}>
-              <Text style={styles.dateDividerText}>{item.label}</Text>
+              <Text style={styles.dateDividerText}>{item.label.toUpperCase()}</Text>
             </View>
+            <View style={styles.dateRule} />
           </View>
         );
       }
@@ -377,15 +392,15 @@ export default function ChatScreen() {
   const bottomSpacer =
     keyboardHeight > 0
       ? keyboardHeight + 8
-      : Math.max(insets.bottom, 10) + 74;
+      : Math.max(insets.bottom, 10) + 70;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* WA-style Chat Header */}
+        {/* Editorial Messenger Header */}
         <View style={styles.header}>
           <View style={styles.partnerHead}>
-            <View style={[styles.avatar, { backgroundColor: partner.auraColor }]}>
+            <View style={[styles.avatar, { backgroundColor: partnerInitialBg }]}>
               <Text style={styles.avatarText}>
                 {partner.name.slice(0, 1).toUpperCase()}
               </Text>
@@ -393,21 +408,21 @@ export default function ChatScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.partnerName} numberOfLines={1}>
-                {partner.name} ({partner.nickname})
+                {partner.name} · {partner.nickname}
               </Text>
               <Text
                 style={[
                   styles.partnerSub,
-                  isPartnerTyping && { color: '#009E7A', fontWeight: '800' },
+                  isPartnerTyping && { color: Pastel.matcha, fontFamily: BodyFontBold },
                 ]}
                 numberOfLines={1}>
                 {isPartnerTyping
                   ? 'sedang mengetik...'
                   : isPartnerOnline
-                    ? 'Online • Live 2 HP'
+                    ? 'Online · Live 2 HP'
                     : isLive
-                      ? `Terakhir aktif ${formatRelativeTime(partner.updatedAt)}`
-                      : 'Mode Lokal • Tap awan untuk Live 2 HP'}
+                      ? `Aktif ${formatRelativeTime(partner.updatedAt)}`
+                      : 'Mode Lokal · Tap ikon awan untuk Live'}
               </Text>
             </View>
           </View>
@@ -416,18 +431,18 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={() => setSyncModalVisible(true)}
               style={[styles.iconPill, isLive && styles.iconPillLive]}>
-              <Cloud size={14} color={isLive ? '#178C68' : Pastel.coralDark} />
+              <Cloud size={14} color={isLive ? Pastel.matcha : Pastel.textMuted} />
             </BouncyPressable>
             <BouncyPressable
               onPress={() => setActivePartner(activePartnerId === 'p1' ? 'p2' : 'p1')}
               style={styles.switchPill}>
-              <ArrowLeftRight size={13} color="#5B43D6" />
+              <ArrowLeftRight size={12} color={Pastel.text} />
               <Text style={styles.switchText}>{me.name}</Text>
             </BouncyPressable>
           </View>
         </View>
 
-        {/* Chat Messages List */}
+        {/* Chat Messages Canvas */}
         <View style={styles.listWrap}>
           <FlashList
             ref={listRef}
@@ -445,7 +460,7 @@ export default function ChatScreen() {
           />
         </View>
 
-        {/* Composer Area (lifts smoothly above keyboard) */}
+        {/* Composer Area */}
         <View style={[styles.composerOuter, { paddingBottom: bottomSpacer }]}>
           {replyTarget ? (
             <View style={styles.replyBanner}>
@@ -455,7 +470,7 @@ export default function ChatScreen() {
                   Membalas {replyTarget.senderId === 'p1' ? p1.name : p2.name}
                 </Text>
                 <Text style={styles.replyBannerPreview} numberOfLines={1}>
-                  {replyTarget.text || replyTarget.sticker || '📷 Foto'}
+                  {replyTarget.text || replyTarget.sticker || 'Foto'}
                 </Text>
               </View>
               <BouncyPressable onPress={() => setReplyTarget(null)} style={styles.replyClose}>
@@ -481,17 +496,17 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={() => setShowStickers((v) => !v)}
               style={[styles.mediaBtn, showStickers && styles.mediaBtnActive]}>
-              <Smile size={19} color={showStickers ? Pastel.coralDark : Pastel.textMuted} />
+              <Smile size={18} color={showStickers ? Pastel.coral : Pastel.textMuted} />
             </BouncyPressable>
 
             <BouncyPressable onPress={handlePickPhoto} style={styles.mediaBtn}>
-              <ImagePlus size={19} color={Pastel.textMuted} />
+              <ImagePlus size={18} color={Pastel.textMuted} />
             </BouncyPressable>
 
             <TextInput
               value={inputText}
               onChangeText={handleTextChange}
-              placeholder={`Ketik pesan ke ${partner.name}...`}
+              placeholder={`Tulis pesan untuk ${partner.name}...`}
               placeholderTextColor={Pastel.textSoft}
               style={styles.input}
               multiline
@@ -501,8 +516,8 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={handleSendText}
               disabled={!inputText.trim()}
-              style={[styles.sendBtn, !inputText.trim() && { opacity: 0.45 }]}>
-              <Send size={17} color={Pastel.white} />
+              style={[styles.sendBtn, !inputText.trim() && { opacity: 0.4 }]}>
+              <Send size={16} color={Pastel.pureWhite} />
             </BouncyPressable>
           </View>
         </View>
@@ -530,7 +545,7 @@ export default function ChatScreen() {
                       styles.emojiChoice,
                       selectedMsg.reaction === em && styles.emojiChoiceActive,
                     ]}>
-                    <Text style={{ fontSize: 22 }}>{em}</Text>
+                    <Text style={{ fontSize: 21 }}>{em}</Text>
                   </BouncyPressable>
                 ))}
               </View>
@@ -541,7 +556,7 @@ export default function ChatScreen() {
                   setSelectedMsg(null);
                 }}
                 style={styles.actionRow}>
-                <Reply size={17} color="#5B43D6" />
+                <Reply size={16} color={Pastel.text} />
                 <Text style={styles.actionRowText}>Balas Pesan Ini</Text>
               </BouncyPressable>
 
@@ -552,7 +567,7 @@ export default function ChatScreen() {
                   setSelectedMsg(null);
                 }}
                 style={styles.actionRow}>
-                <Trash2 size={17} color={Pastel.coralDark} />
+                <Trash2 size={16} color={Pastel.coralDark} />
                 <Text style={[styles.actionRowText, { color: Pastel.coralDark }]}>
                   Hapus Pesan
                 </Text>
@@ -573,13 +588,14 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Pastel.bg,
+    backgroundColor: Pastel.bgElevated,
     alignItems: 'center',
   },
   container: {
     flex: 1,
     width: '100%',
     maxWidth: 540,
+    backgroundColor: Pastel.bg,
   },
   header: {
     flexDirection: 'row',
@@ -587,10 +603,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: Pastel.white,
-    borderBottomWidth: 1.5,
-    borderBottomColor: Pastel.border,
+    paddingVertical: 11,
+    backgroundColor: Pastel.bgElevated,
+    borderBottomWidth: 1,
+    borderBottomColor: Pastel.borderStrong,
   },
   partnerHead: {
     flex: 1,
@@ -599,40 +615,37 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   avatarText: {
-    fontFamily: RoundedFont,
-    fontSize: 16,
-    fontWeight: '800',
-    color: Pastel.white,
+    fontFamily: SerifFontSemi,
+    fontSize: 18,
+    color: Pastel.pureWhite,
   },
   onlineDot: {
     position: 'absolute',
-    right: 0,
-    bottom: 0,
+    right: -2,
+    bottom: -2,
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#19C37D',
+    backgroundColor: Pastel.matcha,
     borderWidth: 2,
-    borderColor: Pastel.white,
+    borderColor: Pastel.bgElevated,
   },
   partnerName: {
-    fontFamily: RoundedFont,
-    fontSize: 15.5,
-    fontWeight: '800',
+    fontFamily: SerifFontSemi,
+    fontSize: 17.5,
     color: Pastel.text,
   },
   partnerSub: {
     fontFamily: RoundedFont,
     fontSize: 11.5,
-    fontWeight: '600',
     color: Pastel.textMuted,
   },
   headerActions: {
@@ -643,59 +656,65 @@ const styles = StyleSheet.create({
   iconPill: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    backgroundColor: Pastel.coralSoft,
-    borderWidth: 1.5,
-    borderColor: '#FFC7D6',
+    borderRadius: 10,
+    backgroundColor: Pastel.bg,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconPillLive: {
     backgroundColor: Pastel.matchaSoft,
-    borderColor: '#B5EED9',
+    borderColor: Pastel.matcha + '66',
   },
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: Pastel.taroSoft,
-    borderWidth: 1.5,
-    borderColor: '#D6CCFF',
+    gap: 5,
+    backgroundColor: Pastel.bgMuted,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 10,
   },
   switchText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 12,
-    fontWeight: '700',
-    color: '#5B43D6',
+    color: Pastel.text,
   },
   listWrap: {
     flex: 1,
     backgroundColor: Pastel.bg,
   },
   listContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   dateDividerWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
+    gap: 10,
+    marginVertical: 12,
+  },
+  dateRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Pastel.border,
   },
   dateDividerPill: {
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    backgroundColor: Pastel.bgMuted,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   dateDividerText: {
-    fontFamily: RoundedFont,
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: MonoFontBold,
+    fontSize: 9.5,
     color: Pastel.textMuted,
+    letterSpacing: 0.7,
   },
   bubbleRow: {
     marginVertical: 4,
@@ -709,69 +728,66 @@ const styles = StyleSheet.create({
   },
   bubble: {
     maxWidth: '80%',
-    borderRadius: 20,
+    borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     gap: 4,
     position: 'relative',
     marginBottom: 4,
   },
   bubbleMine: {
-    backgroundColor: Pastel.coral,
-    borderBottomRightRadius: 6,
+    backgroundColor: Pastel.matcha,
+    borderBottomRightRadius: 4,
   },
   bubblePartner: {
-    backgroundColor: Pastel.white,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderBottomLeftRadius: 6,
+    backgroundColor: Pastel.bgElevated,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderBottomLeftRadius: 4,
   },
   replyQuote: {
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 5,
-    borderLeftWidth: 3,
+    borderLeftWidth: 2.5,
     marginBottom: 2,
   },
   replyQuoteMine: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderLeftColor: Pastel.white,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderLeftColor: Pastel.pureWhite,
   },
   replyQuotePartner: {
     backgroundColor: Pastel.bg,
-    borderLeftColor: Pastel.taro,
+    borderLeftColor: Pastel.coral,
   },
   replyQuoteAuthor: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 11,
-    fontWeight: '800',
     color: Pastel.text,
   },
   replyQuoteText: {
     fontFamily: RoundedFont,
     fontSize: 11.5,
-    fontWeight: '500',
     color: Pastel.textMuted,
   },
   chatImage: {
     width: 210,
     height: 165,
-    borderRadius: 14,
+    borderRadius: 10,
   },
   stickerMsg: {
-    fontSize: 42,
+    fontSize: 40,
     textAlign: 'center',
     paddingVertical: 2,
   },
   msgText: {
     fontFamily: RoundedFont,
     fontSize: 14.5,
-    fontWeight: '600',
     color: Pastel.text,
     lineHeight: 20,
   },
   msgTextMine: {
-    color: Pastel.white,
+    color: Pastel.pureWhite,
   },
   bubbleFooter: {
     flexDirection: 'row',
@@ -782,36 +798,35 @@ const styles = StyleSheet.create({
   },
   quickReplyIcon: {
     marginRight: 4,
-    opacity: 0.7,
+    opacity: 0.72,
   },
   timeText: {
-    fontFamily: RoundedFont,
-    fontSize: 10.5,
-    fontWeight: '600',
+    fontFamily: MonoFont,
+    fontSize: 10,
     color: Pastel.textSoft,
   },
   timeTextMine: {
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.82)',
   },
   reactionBadge: {
     position: 'absolute',
     bottom: -10,
-    backgroundColor: Pastel.white,
+    backgroundColor: Pastel.bgElevated,
     borderRadius: 999,
     paddingHorizontal: 6,
     paddingVertical: 1,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
   reactionEmoji: {
     fontSize: 12,
   },
   composerOuter: {
-    backgroundColor: Pastel.white,
-    borderTopWidth: 1.5,
-    borderTopColor: Pastel.border,
+    backgroundColor: Pastel.bgElevated,
+    borderTopWidth: 1,
+    borderTopColor: Pastel.borderStrong,
     paddingHorizontal: 10,
-    paddingTop: 8,
+    paddingTop: 9,
     gap: 8,
   },
   replyBanner: {
@@ -819,23 +834,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     backgroundColor: Pastel.bg,
-    borderRadius: 14,
+    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
   },
   replyStripe: {
     width: 3,
     height: '100%',
     borderRadius: 2,
-    backgroundColor: Pastel.taro,
+    backgroundColor: Pastel.coral,
   },
   replyBannerAuthor: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 11.5,
-    fontWeight: '800',
-    color: '#5B43D6',
+    color: Pastel.coralDark,
   },
   replyBannerPreview: {
     fontFamily: RoundedFont,
@@ -845,8 +859,8 @@ const styles = StyleSheet.create({
   replyClose: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: Pastel.white,
+    borderRadius: 8,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -860,15 +874,15 @@ const styles = StyleSheet.create({
   stickerItem: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 10,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Pastel.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stickerEmoji: {
-    fontSize: 22,
+    fontSize: 21,
   },
   composerRow: {
     flexDirection: 'row',
@@ -878,10 +892,10 @@ const styles = StyleSheet.create({
   mediaBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -894,10 +908,10 @@ const styles = StyleSheet.create({
     minHeight: 40,
     maxHeight: 110,
     backgroundColor: Pastel.bg,
-    borderWidth: 1.5,
-    borderColor: Pastel.border,
-    borderRadius: 20,
-    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
+    borderRadius: 12,
+    paddingHorizontal: 13,
     paddingVertical: 9,
     fontFamily: RoundedFont,
     fontSize: 14,
@@ -906,14 +920,14 @@ const styles = StyleSheet.create({
   sendBtn: {
     width: 42,
     height: 42,
-    borderRadius: 21,
-    backgroundColor: '#00A884',
+    borderRadius: 12,
+    backgroundColor: Pastel.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(45, 34, 53, 0.35)',
+    backgroundColor: 'rgba(31, 27, 24, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -921,31 +935,32 @@ const styles = StyleSheet.create({
   actionSheet: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: Pastel.white,
-    borderRadius: 24,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 16,
     padding: 16,
-    borderWidth: 2,
-    borderColor: Pastel.border,
+    borderWidth: 1,
+    borderColor: Pastel.borderStrong,
     gap: 10,
   },
   emojiBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: 8,
-    borderBottomWidth: 1.5,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
     borderBottomColor: Pastel.border,
   },
   emojiChoice: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Pastel.bg,
+    borderWidth: 1,
+    borderColor: Pastel.border,
   },
   emojiChoiceActive: {
     backgroundColor: Pastel.coralSoft,
-    borderWidth: 1.5,
     borderColor: Pastel.coral,
   },
   actionRow: {
@@ -956,9 +971,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   actionRowText: {
-    fontFamily: RoundedFont,
-    fontSize: 14.5,
-    fontWeight: '700',
+    fontFamily: BodyFontSemi,
+    fontSize: 14,
     color: Pastel.text,
   },
 });
