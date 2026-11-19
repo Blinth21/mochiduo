@@ -48,22 +48,65 @@ create index if not exists idx_couple_buckets_room on public.couple_buckets(room
 create index if not exists idx_couple_notes_room on public.couple_notes(room_code, created_at desc);
 create index if not exists idx_couple_messages_room on public.couple_messages(room_code, created_at asc);
 
--- Row Level Security (akses dibatasi per project & room_code rahasia pasangan)
+-- Row Level Security & Hak Akses Role (wajib agar anon key di APK bisa baca/tulis)
+grant usage on schema public to anon, authenticated;
+
+grant select, insert, update, delete on table
+  public.couple_rooms,
+  public.couple_memories,
+  public.couple_buckets,
+  public.couple_notes,
+  public.couple_messages
+to anon, authenticated;
+
 alter table public.couple_rooms enable row level security;
 alter table public.couple_memories enable row level security;
 alter table public.couple_buckets enable row level security;
 alter table public.couple_notes enable row level security;
 alter table public.couple_messages enable row level security;
 
-create policy "Allow couple_rooms access" on public.couple_rooms for all using (true) with check (true);
-create policy "Allow couple_memories access" on public.couple_memories for all using (true) with check (true);
-create policy "Allow couple_buckets access" on public.couple_buckets for all using (true) with check (true);
-create policy "Allow couple_notes access" on public.couple_notes for all using (true) with check (true);
-create policy "Allow couple_messages access" on public.couple_messages for all using (true) with check (true);
+drop policy if exists "Allow couple_rooms access" on public.couple_rooms;
+create policy "Allow couple_rooms access" on public.couple_rooms for all to anon, authenticated using (true) with check (true);
 
--- Aktifkan Realtime Postgres Changes untuk semua tabel
-alter publication supabase_realtime add table public.couple_rooms;
-alter publication supabase_realtime add table public.couple_memories;
-alter publication supabase_realtime add table public.couple_buckets;
-alter publication supabase_realtime add table public.couple_notes;
-alter publication supabase_realtime add table public.couple_messages;
+drop policy if exists "Allow couple_memories access" on public.couple_memories;
+create policy "Allow couple_memories access" on public.couple_memories for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow couple_buckets access" on public.couple_buckets;
+create policy "Allow couple_buckets access" on public.couple_buckets for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow couple_notes access" on public.couple_notes;
+create policy "Allow couple_notes access" on public.couple_notes for all to anon, authenticated using (true) with check (true);
+
+drop policy if exists "Allow couple_messages access" on public.couple_messages;
+create policy "Allow couple_messages access" on public.couple_messages for all to anon, authenticated using (true) with check (true);
+
+-- Aktifkan Realtime Postgres Changes untuk semua tabel (aman dijalankan ulang)
+do $$
+begin
+  alter publication supabase_realtime add table public.couple_rooms;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.couple_memories;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.couple_buckets;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.couple_notes;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.couple_messages;
+exception when duplicate_object then null;
+end $$;

@@ -68,6 +68,14 @@ export interface RemoteRoomData {
   chatMessages: ChatMessage[];
 }
 
+function formatSupabaseError(msg?: string | null): string {
+  if (!msg) return 'Terjadi kesalahan koneksi Supabase.';
+  if (msg.toLowerCase().includes('permission denied for table')) {
+    return `${msg} — Jalankan GRANT ke role anon & authenticated di Supabase SQL Editor (lihat supabase/schema.sql).`;
+  }
+  return msg;
+}
+
 export async function joinOrCreateRoom(
   config: SyncConfig,
   seed: RoomSeedPayload
@@ -85,7 +93,7 @@ export async function joinOrCreateRoom(
     .maybeSingle();
 
   if (fetchErr) {
-    return { error: fetchErr.message };
+    return { error: formatSupabaseError(fetchErr.message) };
   }
 
   if (existingRoom) {
@@ -154,7 +162,7 @@ export async function joinOrCreateRoom(
   });
 
   if (insertRoomErr) {
-    return { error: insertRoomErr.message };
+    return { error: formatSupabaseError(insertRoomErr.message) };
   }
 
   await Promise.all([
