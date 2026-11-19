@@ -1,17 +1,18 @@
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import {
   Camera,
   Heart,
   ImagePlus,
   MapPin,
+  Maximize2,
   Plus,
   Trash2,
   X,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +24,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { DatePickerField } from '@/components/DatePickerField';
 import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
+import {
+  type PhotoLightboxData,
+  PhotoLightboxModal,
+} from '@/components/PhotoLightboxModal';
 import {
   BodyFontBold,
   BodyFontRegular,
@@ -36,7 +41,12 @@ import {
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { MemoryItem, MemoryTag } from '@/types/couple';
 import { formatIndonesianDate } from '@/utils/dateCalc';
-import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
+import {
+  triggerLightHaptic,
+  triggerMediumHaptic,
+  triggerSuccessHaptic,
+} from '@/utils/haptics';
+import { pickImageFromGallery, takePhotoWithCamera } from '@/utils/mediaPicker';
 
 const MEMORY_STICKERS = ['📸', '🍜', '🛵', '🍦', '🌸', '🎬', '🧸', '✨'];
 const CARD_COLORS = ['#FFF0F3', '#FFF7E6', '#EEF5FF', '#F3F0FF', '#EBF8F3'];
@@ -45,27 +55,38 @@ interface MemoryCardProps {
   item: MemoryItem;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
+  onPressPhoto: (item: MemoryItem) => void;
 }
 
 const MemoryCard = React.memo(function MemoryCard({
   item,
   onToggleFavorite,
   onDelete,
+  onPressPhoto,
 }: MemoryCardProps) {
   const tagMeta = MEMORY_TAGS.find((t) => t.id === item.tag) ?? MEMORY_TAGS[1];
 
   return (
     <View style={[styles.storyCard, SoftShadow]}>
-      {/* Edge-to-edge Photo or Soft Pastel Illustration Bay */}
+      {/* Edge-to-edge Photo (tappable fullscreen) or Soft Pastel Illustration Bay */}
       <View style={[styles.coverBox, { backgroundColor: item.cardBg || Pastel.coralSoft }]}>
         {item.photoUri ? (
-          <Image
-            source={{ uri: item.photoUri }}
-            style={styles.coverImage}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-          />
+          <Pressable
+            onPress={() => onPressPhoto(item)}
+            style={styles.coverImageTap}
+            accessibilityLabel={`Lihat foto ${item.title}`}>
+            <Image
+              source={{ uri: item.photoUri }}
+              style={styles.coverImage}
+              contentFit="cover"
+              transition={160}
+              cachePolicy="memory-disk"
+              recyclingKey={item.id}
+            />
+            <View style={styles.coverExpandPill} pointerEvents="none">
+              <Maximize2 size={12} color={Pastel.pureWhite} />
+            </View>
+          </Pressable>
         ) : (
           <View style={styles.pastelCoverContent}>
             <View style={styles.stickerHalo}>
@@ -75,7 +96,7 @@ const MemoryCard = React.memo(function MemoryCard({
         )}
 
         {/* Top Floating Soft White Pills */}
-        <View style={styles.coverTopRow}>
+        <View style={styles.coverTopRow} pointerEvents="box-none">
           <View style={[styles.tagPill, SoftShadowSm]}>
             <Text style={styles.tagPillEmoji}>{tagMeta.emoji}</Text>
             <Text style={[styles.tagPillText, { color: tagMeta.accent }]}>
@@ -134,6 +155,7 @@ export default function MemoriesScreen() {
   const [selectedTag, setSelectedTag] = useState<'all' | MemoryTag>('all');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<PhotoLightboxData | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -173,22 +195,27 @@ export default function MemoriesScreen() {
     [deleteMemory]
   );
 
-  const pickPhoto = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.35,
-      base64: true,
+  const handlePressPhoto = useCallback((item: MemoryItem) => {
+    if (!item.photoUri) return;
+    triggerLightHaptic();
+    setLightboxPhoto({
+      uri: item.photoUri,
+      title: item.title,
+      subtitle: item.location
+        ? `${formatIndonesianDate(item.date)} · ${item.location}`
+        : formatIndonesianDate(item.date),
+      caption: item.story,
     });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      if (asset.base64) {
-        setPhotoUri(`data:image/jpeg;base64,${asset.base64}`);
-      } else if (asset.uri) {
-        setPhotoUri(asset.uri);
-      }
-    }
+  }, []);
+
+  const pickPhoto = useCallback(async () => {
+    const uri = await pickImageFromGallery({ aspect: [4, 3], quality: 0.35 });
+    if (uri) setPhotoUri(uri);
+  }, []);
+
+  const takePhoto = useCallback(async () => {
+    const uri = await takePhotoWithCamera({ aspect: [4, 3], quality: 0.35 });
+    if (uri) setPhotoUri(uri);
   }, []);
 
   const handleCreateMemory = useCallback(() => {
@@ -218,9 +245,10 @@ export default function MemoriesScreen() {
         item={item}
         onToggleFavorite={handleToggleFavorite}
         onDelete={handleDelete}
+        onPressPhoto={handlePressPhoto}
       />
     ),
-    [handleDelete, handleToggleFavorite]
+    [handleDelete, handlePressPhoto, handleToggleFavorite]
   );
 
   const keyExtractor = useCallback((item: MemoryItem) => item.id, []);
@@ -231,8 +259,10 @@ export default function MemoriesScreen() {
         {/* Clean Airy Header */}
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.pageTitle}>Album Kenangan</Text>
-            <Text style={styles.pageSub}>
+            <Text style={styles.pageTitle} maxFontSizeMultiplier={1.2}>
+              Album Kenangan
+            </Text>
+            <Text style={styles.pageSub} maxFontSizeMultiplier={1.2}>
               {memories.length} momen tersimpan · {favCount} favorit
             </Text>
           </View>
@@ -241,7 +271,9 @@ export default function MemoriesScreen() {
             onPress={() => setModalVisible(true)}
             style={styles.addBtn}>
             <Plus size={16} color={Pastel.pureWhite} />
-            <Text style={styles.addBtnText}>Momen</Text>
+            <Text style={styles.addBtnText} maxFontSizeMultiplier={1.15}>
+              Momen
+            </Text>
           </BouncyPressable>
         </View>
 
@@ -303,6 +335,7 @@ export default function MemoriesScreen() {
             data={filteredMemories}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
+            drawDistance={450}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
@@ -337,26 +370,49 @@ export default function MemoriesScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.modalBody}>
-          {/* Photo Picker */}
-          <BouncyPressable onPress={pickPhoto} style={styles.photoPickerBox}>
+          {/* Photo Preview + Direct Camera & Gallery Actions */}
+          <View style={styles.photoPickerBox}>
             {photoUri ? (
-              <Image
-                source={{ uri: photoUri }}
-                style={styles.previewImage}
-                contentFit="cover"
-              />
+              <>
+                <Image
+                  source={{ uri: photoUri }}
+                  style={styles.previewImage}
+                  contentFit="cover"
+                />
+                <BouncyPressable
+                  onPress={() => setPhotoUri(undefined)}
+                  style={styles.removePhotoPill}>
+                  <Trash2 size={13} color={Pastel.coralDark} />
+                  <Text style={styles.removePhotoText}>Hapus</Text>
+                </BouncyPressable>
+              </>
             ) : (
               <View style={styles.photoPickerPlaceholder}>
                 <View style={styles.photoPickerIconWrap}>
-                  <ImagePlus size={22} color={Pastel.coral} />
+                  <Camera size={22} color={Pastel.coral} />
                 </View>
-                <Text style={styles.photoPickerTitle}>Pilih Foto dari Galeri</Text>
+                <Text style={styles.photoPickerTitle}>Foto Momen Berdua</Text>
                 <Text style={styles.photoPickerSub}>
-                  Opsional — kosongkan untuk sampul pastel lucu
+                  Foto langsung dari kamera atau pilih galeri (opsional)
                 </Text>
               </View>
             )}
-          </BouncyPressable>
+          </View>
+
+          <View style={styles.mediaSourceRow}>
+            <BouncyPressable
+              onPress={() => void takePhoto()}
+              style={styles.mediaSourceBtnPrimary}>
+              <Camera size={16} color={Pastel.coralDark} />
+              <Text style={styles.mediaSourceTextPrimary}>Ambil Foto</Text>
+            </BouncyPressable>
+            <BouncyPressable
+              onPress={() => void pickPhoto()}
+              style={styles.mediaSourceBtnSoft}>
+              <ImagePlus size={16} color={Pastel.text} />
+              <Text style={styles.mediaSourceTextSoft}>Pilih Galeri</Text>
+            </BouncyPressable>
+          </View>
 
           <Text style={styles.inputLabel}>Judul Momen *</Text>
           <TextInput
@@ -441,6 +497,11 @@ export default function MemoriesScreen() {
           </BouncyPressable>
         </ScrollView>
       </KeyboardModalSheet>
+
+      <PhotoLightboxModal
+        photo={lightboxPhoto}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -553,9 +614,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  coverImageTap: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
   coverImage: {
     width: '100%',
     height: '100%',
+  },
+  coverExpandPill: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(18, 20, 28, 0.56)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pastelCoverContent: {
     alignItems: 'center',
@@ -723,16 +800,71 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   photoPickerBox: {
-    height: 136,
+    height: 144,
     borderRadius: 20,
     backgroundColor: Pastel.bgMuted,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   previewImage: {
     width: '100%',
     height: '100%',
+  },
+  removePhotoPill: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  removePhotoText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.coralDark,
+  },
+  mediaSourceRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  mediaSourceBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: Pastel.coralSoft,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+  mediaSourceTextPrimary: {
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: Pastel.coralDark,
+  },
+  mediaSourceBtnSoft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: Pastel.bgMuted,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+  mediaSourceTextSoft: {
+    fontFamily: BodyFontSemi,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: Pastel.text,
   },
   photoPickerPlaceholder: {
     alignItems: 'center',

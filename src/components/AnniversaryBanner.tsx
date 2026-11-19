@@ -43,15 +43,21 @@ const LiveClockRow = React.memo(function LiveClockRow({
   return (
     <View style={styles.heroStats}>
       <View style={styles.daysRow}>
-        <Text style={styles.bigDaysNumber}>{days}</Text>
+        <Text style={styles.bigDaysNumber} maxFontSizeMultiplier={1.15}>
+          {days}
+        </Text>
         <View style={styles.daysTextCol}>
-          <Text style={styles.daysLabel}>hari bersama</Text>
-          <Text style={styles.sinceLabel}>Sejak {formatIndonesianDate(startDate)}</Text>
+          <Text style={styles.daysLabel} maxFontSizeMultiplier={1.2}>
+            hari bersama
+          </Text>
+          <Text style={styles.sinceLabel} maxFontSizeMultiplier={1.2}>
+            Sejak {formatIndonesianDate(startDate)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.clockPill}>
-        <Text style={styles.clockText}>
+        <Text style={styles.clockText} maxFontSizeMultiplier={1.2}>
           {pad(hours)}j : {pad(minutes)}m : {pad(seconds)}d
         </Text>
       </View>
@@ -84,10 +90,10 @@ export const AnniversaryBanner = React.memo(function AnniversaryBanner({
             <Heart size={13} color={Pastel.pureWhite} fill={Pastel.pureWhite} />
           </View>
           <View style={styles.titleTextCol}>
-            <Text style={styles.coupleTitle} numberOfLines={1}>
+            <Text style={styles.coupleTitle} numberOfLines={1} maxFontSizeMultiplier={1.2}>
               {coupleTitle}
             </Text>
-            <Text style={styles.partnersSub} numberOfLines={1}>
+            <Text style={styles.partnersSub} numberOfLines={1} maxFontSizeMultiplier={1.2}>
               {p1Name} &amp; {p2Name}
             </Text>
           </View>
@@ -105,12 +111,14 @@ export const AnniversaryBanner = React.memo(function AnniversaryBanner({
 
       <View style={styles.milestoneBox}>
         <View style={styles.milestoneTop}>
-          <Text style={styles.milestoneTitle}>
+          <Text style={styles.milestoneTitle} maxFontSizeMultiplier={1.2}>
             {info.isTodayAnniversary
               ? `Happy Anniv ke-${info.annivNumber}!`
               : `Anniv ke-${info.annivNumber} · ${info.daysLeft} hari lagi`}
           </Text>
-          <Text style={styles.milestoneDate}>{info.nextDateFormatted}</Text>
+          <Text style={styles.milestoneDate} maxFontSizeMultiplier={1.2}>
+            {info.nextDateFormatted}
+          </Text>
         </View>
 
         <View style={styles.progressTrack}>
@@ -123,10 +131,12 @@ export const AnniversaryBanner = React.memo(function AnniversaryBanner({
         </View>
 
         <View style={styles.milestoneBottom}>
-          <Text style={styles.milestoneFoot}>
+          <Text style={styles.milestoneFoot} maxFontSizeMultiplier={1.2}>
             Target {info.nextMilestoneDays} hari · sisa {info.daysToMilestone} hari
           </Text>
-          <Text style={styles.milestonePct}>{Math.round(info.progressRatio * 100)}%</Text>
+          <Text style={styles.milestonePct} maxFontSizeMultiplier={1.2}>
+            {Math.round(info.progressRatio * 100)}%
+          </Text>
         </View>
       </View>
     </View>
@@ -222,6 +232,8 @@ const styles = StyleSheet.create({
     lineHeight: 54,
     color: Pastel.pureWhite,
     fontVariant: ['tabular-nums'],
+    flexShrink: 0,
+    paddingRight: 2,
   },
   daysTextCol: {
     paddingBottom: 6,
@@ -232,12 +244,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21,
     color: Pastel.pureWhite,
+    paddingRight: 2,
   },
   sinceLabel: {
     fontFamily: RoundedFont,
     fontSize: 12,
     lineHeight: 17,
     color: 'rgba(255,255,255,0.86)',
+    paddingRight: 2,
   },
   clockPill: {
     alignSelf: 'flex-start',
@@ -252,6 +266,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: Pastel.pureWhite,
     fontVariant: ['tabular-nums'],
+    paddingRight: 2,
   },
   milestoneBox: {
     backgroundColor: 'rgba(255,255,255,0.18)',
@@ -271,12 +286,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: Pastel.pureWhite,
+    paddingRight: 2,
   },
   milestoneDate: {
     fontFamily: RoundedFont,
     fontSize: 12,
     lineHeight: 17,
     color: 'rgba(255,255,255,0.88)',
+    flexShrink: 0,
+    paddingRight: 2,
   },
   progressTrack: {
     height: 7,
@@ -301,11 +319,14 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: 'rgba(255,255,255,0.88)',
     flexShrink: 1,
+    paddingRight: 2,
   },
   milestonePct: {
     fontFamily: BodyFontBold,
     fontSize: 12,
     lineHeight: 16,
     color: Pastel.pureWhite,
+    flexShrink: 0,
+    paddingRight: 2,
   },
 });

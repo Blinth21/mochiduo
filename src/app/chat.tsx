@@ -1,13 +1,14 @@
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
 import {
   ArrowLeftRight,
+  Camera,
   Check,
   CheckCheck,
   Cloud,
   ImagePlus,
+  Maximize2,
   Reply,
   Send,
   Smile,
@@ -30,6 +31,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { LiveSyncModal } from '@/components/LiveSyncModal';
 import {
+  type PhotoLightboxData,
+  PhotoLightboxModal,
+} from '@/components/PhotoLightboxModal';
+import {
   BodyFontBold,
   BodyFontRegular,
   BodyFontSemi,
@@ -43,6 +48,7 @@ import { useCoupleStore } from '@/store/useCoupleStore';
 import type { ChatMessage, PartnerId } from '@/types/couple';
 import { formatRelativeTime } from '@/utils/dateCalc';
 import { triggerLightHaptic, triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
+import { pickImageFromGallery, takePhotoWithCamera } from '@/utils/mediaPicker';
 
 const CHAT_STICKERS = ['😘', '🥰', '🫂', '💕', '🥺', '😂', '🍦', '☕', '🍓', '✨'];
 const BUBBLE_REACTIONS = ['❤️', '😂', '🥺', '🫂', '👍', '🔥'];
@@ -81,6 +87,7 @@ interface MessageBubbleProps {
   p2Name: string;
   onLongPress: (msg: ChatMessage) => void;
   onReplyTap: (msg: ChatMessage) => void;
+  onImagePress: (msg: ChatMessage, senderName: string) => void;
 }
 
 const MessageBubble = React.memo(function MessageBubble({
@@ -91,6 +98,7 @@ const MessageBubble = React.memo(function MessageBubble({
   p2Name,
   onLongPress,
   onReplyTap,
+  onImagePress,
 }: MessageBubbleProps) {
   const replyAuthor =
     msg.replyToSender === 'p1' ? p1Name : msg.replyToSender === 'p2' ? p2Name : senderName;
@@ -125,14 +133,24 @@ const MessageBubble = React.memo(function MessageBubble({
           </View>
         ) : null}
 
-        {/* Photo attachment */}
+        {/* Tappable Photo attachment -> Fullscreen Lightbox */}
         {msg.imageUri ? (
-          <Image
-            source={{ uri: msg.imageUri }}
-            style={styles.chatImage}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
+          <Pressable
+            onPress={() => onImagePress(msg, senderName)}
+            onLongPress={() => onLongPress(msg)}
+            delayLongPress={240}
+            style={styles.chatImageTap}>
+            <Image
+              source={{ uri: msg.imageUri }}
+              style={styles.chatImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              recyclingKey={msg.id}
+            />
+            <View style={styles.imageExpandPill} pointerEvents="none">
+              <Maximize2 size={11} color={Pastel.pureWhite} />
+            </View>
+          </Pressable>
         ) : null}
 
         {/* Sticker */}
@@ -187,6 +205,8 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const listRef = useRef<any>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevMsgCountRef = useRef(0);
+  const hasInitialScrolledRef = useRef(false);
 
   const activePartnerId = useCoupleStore((s) => s.activePartnerId);
   const setActivePartner = useCoupleStore((s) => s.setActivePartner);
@@ -203,6 +223,7 @@ export default function ChatScreen() {
   const deleteChatMessage = useCoupleStore((s) => s.deleteChatMessage);
   const markPartnerMessagesRead = useCoupleStore((s) => s.markPartnerMessagesRead);
   const setIsChatFocused = useCoupleStore((s) => s.setIsChatFocused);
+  const updatePartnerAvatar = useCoupleStore((s) => s.updatePartnerAvatar);
 
   const partnerId: PartnerId = activePartnerId === 'p1' ? 'p2' : 'p1';
   const me = activePartnerId === 'p1' ? p1 : p2;
@@ -211,12 +232,15 @@ export default function ChatScreen() {
   const isPartnerOnline = onlinePartners[partnerId];
   const isLive = syncConfig.enabled && syncStatus === 'connected';
   const partnerInitialBg = partnerId === 'p1' ? Pastel.coral : Pastel.matcha;
+  const myInitialBg = activePartnerId === 'p1' ? Pastel.coral : Pastel.matcha;
 
   const [inputText, setInputText] = useState('');
   const [showStickers, setShowStickers] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
   const [selectedMsg, setSelectedMsg] = useState<ChatMessage | null>(null);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
+  const [avatarSheetVisible, setAvatarSheetVisible] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<PhotoLightboxData | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useFocusEffect(
@@ -232,6 +256,32 @@ export default function ChatScreen() {
   useEffect(() => {
     markPartnerMessagesRead(activePartnerId);
   }, [activePartnerId, chatMessages.length, markPartnerMessagesRead]);
+
+  // Smoothly scroll to bottom ONLY on initial load and when new messages arrive
+  // (avoids 120Hz jank from firing scrollToEnd on every image decode / reaction resize)
+  useEffect(() => {
+    const count = chatMessages.length;
+    if (count === 0) {
+      prevMsgCountRef.current = 0;
+      return;
+    }
+    if (!hasInitialScrolledRef.current) {
+      hasInitialScrolledRef.current = true;
+      prevMsgCountRef.current = count;
+      const timer = setTimeout(() => {
+        listRef.current?.scrollToEnd?.({ animated: false });
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+    if (count > prevMsgCountRef.current) {
+      const timer = setTimeout(() => {
+        listRef.current?.scrollToEnd?.({ animated: true });
+      }, 70);
+      prevMsgCountRef.current = count;
+      return () => clearTimeout(timer);
+    }
+    prevMsgCountRef.current = count;
+  }, [chatMessages.length]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -299,7 +349,6 @@ export default function ChatScreen() {
     });
     setInputText('');
     setReplyTarget(null);
-    setTimeout(() => listRef.current?.scrollToEnd?.({ animated: true }), 70);
   }, [activePartnerId, inputText, isLive, replyTarget, sendChatMessage, syncConfig.roomCode]);
 
   const handleSendSticker = useCallback(
@@ -319,24 +368,12 @@ export default function ChatScreen() {
       });
       setShowStickers(false);
       setReplyTarget(null);
-      setTimeout(() => listRef.current?.scrollToEnd?.({ animated: true }), 70);
     },
     [activePartnerId, replyTarget, sendChatMessage]
   );
 
-  const handlePickPhoto = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.4,
-      base64: true,
-    });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      const uri = asset.base64
-        ? `data:image/jpeg;base64,${asset.base64}`
-        : asset.uri;
-      if (!uri) return;
+  const sendPhotoUri = useCallback(
+    (uri: string) => {
       triggerSuccessHaptic();
       sendChatMessage({
         senderId: activePartnerId,
@@ -352,9 +389,42 @@ export default function ChatScreen() {
       });
       setInputText('');
       setReplyTarget(null);
-      setTimeout(() => listRef.current?.scrollToEnd?.({ animated: true }), 80);
-    }
-  }, [activePartnerId, inputText, replyTarget, sendChatMessage]);
+    },
+    [activePartnerId, inputText, replyTarget, sendChatMessage]
+  );
+
+  const handlePickPhoto = useCallback(async () => {
+    const uri = await pickImageFromGallery({ quality: 0.38 });
+    if (uri) sendPhotoUri(uri);
+  }, [sendPhotoUri]);
+
+  const handleTakePhoto = useCallback(async () => {
+    const uri = await takePhotoWithCamera({ quality: 0.38 });
+    if (uri) sendPhotoUri(uri);
+  }, [sendPhotoUri]);
+
+  const handleChangeAvatar = useCallback(
+    async (targetId: PartnerId, source: 'camera' | 'gallery') => {
+      const uri =
+        source === 'camera'
+          ? await takePhotoWithCamera({ aspect: [1, 1], quality: 0.28 })
+          : await pickImageFromGallery({ aspect: [1, 1], quality: 0.28 });
+      if (!uri) return;
+      triggerSuccessHaptic();
+      updatePartnerAvatar(targetId, uri);
+      setAvatarSheetVisible(false);
+    },
+    [updatePartnerAvatar]
+  );
+
+  const handleRemoveAvatar = useCallback(
+    (targetId: PartnerId) => {
+      triggerMediumHaptic();
+      updatePartnerAvatar(targetId, undefined);
+      setAvatarSheetVisible(false);
+    },
+    [updatePartnerAvatar]
+  );
 
   const handleLongPressMsg = useCallback((msg: ChatMessage) => {
     triggerLightHaptic();
@@ -364,6 +434,17 @@ export default function ChatScreen() {
   const handleReplyTap = useCallback((msg: ChatMessage) => {
     triggerLightHaptic();
     setReplyTarget(msg);
+  }, []);
+
+  const handleImagePress = useCallback((msg: ChatMessage, senderName: string) => {
+    if (!msg.imageUri) return;
+    triggerLightHaptic();
+    setLightboxPhoto({
+      uri: msg.imageUri,
+      title: `Foto dari ${senderName}`,
+      subtitle: `${formatDateSeparator(msg.createdAt)} · ${formatTimeHHMM(msg.createdAt)}`,
+      caption: msg.text || undefined,
+    });
   }, []);
 
   const renderRow = useCallback(
@@ -386,10 +467,11 @@ export default function ChatScreen() {
           p2Name={p2.name}
           onLongPress={handleLongPressMsg}
           onReplyTap={handleReplyTap}
+          onImagePress={handleImagePress}
         />
       );
     },
-    [activePartnerId, handleLongPressMsg, handleReplyTap, p1.name, p2.name]
+    [activePartnerId, handleImagePress, handleLongPressMsg, handleReplyTap, p1.name, p2.name]
   );
 
   const bottomSpacer =
@@ -403,14 +485,32 @@ export default function ChatScreen() {
         {/* Clean Pure-White Elevated Header */}
         <View style={[styles.header, SoftShadowSm]}>
           <View style={styles.partnerHead}>
-            <View style={[styles.avatar, { backgroundColor: partnerInitialBg }]}>
-              <Text style={styles.avatarText}>
-                {partner.name.slice(0, 1).toUpperCase()}
-              </Text>
-              {isPartnerOnline ? <View style={styles.onlineDot} /> : null}
-            </View>
+            <BouncyPressable
+              onPress={() => setAvatarSheetVisible(true)}
+              style={[styles.avatar, { backgroundColor: partnerInitialBg }]}
+              accessibilityLabel={`Atur foto profil ${partner.name}`}>
+              {partner.avatarUri ? (
+                <Image
+                  source={{ uri: partner.avatarUri }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {partner.name.slice(0, 1).toUpperCase()}
+                </Text>
+              )}
+              {isPartnerOnline ? (
+                <View style={styles.onlineDot} />
+              ) : (
+                <View style={styles.avatarCamBadge}>
+                  <Camera size={9} color={Pastel.text} />
+                </View>
+              )}
+            </BouncyPressable>
             <View style={styles.partnerInfo}>
-              <Text style={styles.partnerName} numberOfLines={1}>
+              <Text style={styles.partnerName} numberOfLines={1} maxFontSizeMultiplier={1.15}>
                 {partner.name} · {partner.nickname}
               </Text>
               <Text
@@ -418,14 +518,15 @@ export default function ChatScreen() {
                   styles.partnerSub,
                   isPartnerTyping && { color: Pastel.matcha, fontFamily: BodyFontBold },
                 ]}
-                numberOfLines={1}>
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.15}>
                 {isPartnerTyping
                   ? 'sedang mengetik...'
                   : isPartnerOnline
                     ? 'Online · Live 2 HP'
                     : isLive
                       ? `Aktif ${formatRelativeTime(partner.updatedAt)}`
-                      : 'Mode Lokal · Tap awan untuk Live'}
+                      : 'Tap foto untuk ganti profil'}
               </Text>
             </View>
           </View>
@@ -439,8 +540,8 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={() => setActivePartner(activePartnerId === 'p1' ? 'p2' : 'p1')}
               style={styles.switchPill}>
-              <ArrowLeftRight size={13} color={Pastel.coral} />
-              <Text style={styles.switchText} numberOfLines={1}>
+              <ArrowLeftRight size={12} color={Pastel.coral} />
+              <Text style={styles.switchText} numberOfLines={1} maxFontSizeMultiplier={1.15}>
                 {me.name}
               </Text>
             </BouncyPressable>
@@ -454,14 +555,10 @@ export default function ChatScreen() {
             data={rows}
             renderItem={renderRow}
             keyExtractor={(item) => item.id}
+            drawDistance={450}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            onContentSizeChange={() => {
-              if (rows.length > 0) {
-                listRef.current?.scrollToEnd?.({ animated: false });
-              }
-            }}
           />
         </View>
 
@@ -500,12 +597,23 @@ export default function ChatScreen() {
           <View style={styles.composerRow}>
             <BouncyPressable
               onPress={() => setShowStickers((v) => !v)}
-              style={[styles.mediaBtn, showStickers && styles.mediaBtnActive]}>
-              <Smile size={19} color={showStickers ? Pastel.coral : Pastel.textMuted} />
+              style={[styles.mediaBtn, showStickers && styles.mediaBtnActive]}
+              accessibilityLabel="Stiker">
+              <Smile size={18} color={showStickers ? Pastel.coral : Pastel.textMuted} />
             </BouncyPressable>
 
-            <BouncyPressable onPress={handlePickPhoto} style={styles.mediaBtn}>
-              <ImagePlus size={19} color={Pastel.textMuted} />
+            <BouncyPressable
+              onPress={() => void handleTakePhoto()}
+              style={styles.mediaBtn}
+              accessibilityLabel="Buka Kamera">
+              <Camera size={18} color={Pastel.textMuted} />
+            </BouncyPressable>
+
+            <BouncyPressable
+              onPress={() => void handlePickPhoto()}
+              style={styles.mediaBtn}
+              accessibilityLabel="Pilih Foto Galeri">
+              <ImagePlus size={18} color={Pastel.textMuted} />
             </BouncyPressable>
 
             <TextInput
@@ -522,11 +630,147 @@ export default function ChatScreen() {
               onPress={handleSendText}
               disabled={!inputText.trim()}
               style={[styles.sendBtn, !inputText.trim() && { opacity: 0.45 }]}>
-              <Send size={17} color={Pastel.pureWhite} />
+              <Send size={16} color={Pastel.pureWhite} />
             </BouncyPressable>
           </View>
         </View>
       </View>
+
+      {/* Partner & Self Profile Photo Sheet */}
+      <Modal
+        visible={avatarSheetVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAvatarSheetVisible(false)}>
+        <Pressable
+          style={styles.actionOverlay}
+          onPress={() => setAvatarSheetVisible(false)}>
+          <Pressable style={[styles.profileSheet, SoftShadow]} onPress={() => {}}>
+            <View style={styles.profileSheetTop}>
+              <Text style={styles.profileSheetTitle}>Foto Profil Berdua</Text>
+              <BouncyPressable
+                onPress={() => setAvatarSheetVisible(false)}
+                style={styles.profileSheetClose}>
+                <X size={16} color={Pastel.textMuted} />
+              </BouncyPressable>
+            </View>
+
+            {/* Partner Row */}
+            <View style={styles.profileBlock}>
+              <BouncyPressable
+                onPress={() => {
+                  if (partner.avatarUri) {
+                    setAvatarSheetVisible(false);
+                    setLightboxPhoto({
+                      uri: partner.avatarUri,
+                      title: partner.name,
+                      subtitle: `Panggilan: ${partner.nickname}`,
+                    });
+                  }
+                }}
+                style={[styles.sheetAvatar, { backgroundColor: partnerInitialBg }]}>
+                {partner.avatarUri ? (
+                  <Image
+                    source={{ uri: partner.avatarUri }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <Text style={styles.sheetAvatarText}>
+                    {partner.name.slice(0, 1).toUpperCase()}
+                  </Text>
+                )}
+              </BouncyPressable>
+
+              <View style={styles.profileBlockInfo}>
+                <Text style={styles.profileBlockName}>{partner.name}</Text>
+                <Text style={styles.profileBlockHint}>
+                  {partner.avatarUri ? 'Tap foto untuk lihat penuh' : 'Belum ada foto profil'}
+                </Text>
+                <View style={styles.profileActionPills}>
+                  <BouncyPressable
+                    onPress={() => void handleChangeAvatar(partnerId, 'camera')}
+                    style={styles.profilePillPrimary}>
+                    <Camera size={13} color={Pastel.coralDark} />
+                    <Text style={styles.profilePillPrimaryText}>Kamera</Text>
+                  </BouncyPressable>
+                  <BouncyPressable
+                    onPress={() => void handleChangeAvatar(partnerId, 'gallery')}
+                    style={styles.profilePillSoft}>
+                    <ImagePlus size={13} color={Pastel.text} />
+                    <Text style={styles.profilePillSoftText}>Galeri</Text>
+                  </BouncyPressable>
+                  {partner.avatarUri ? (
+                    <BouncyPressable
+                      onPress={() => handleRemoveAvatar(partnerId)}
+                      style={styles.profilePillIcon}>
+                      <Trash2 size={13} color={Pastel.coralDark} />
+                    </BouncyPressable>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+
+            {/* Own Profile Row */}
+            <View style={styles.profileBlock}>
+              <BouncyPressable
+                onPress={() => {
+                  if (me.avatarUri) {
+                    setAvatarSheetVisible(false);
+                    setLightboxPhoto({
+                      uri: me.avatarUri,
+                      title: me.name,
+                      subtitle: `Profil Kamu · ${me.nickname}`,
+                    });
+                  }
+                }}
+                style={[styles.sheetAvatar, { backgroundColor: myInitialBg }]}>
+                {me.avatarUri ? (
+                  <Image
+                    source={{ uri: me.avatarUri }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <Text style={styles.sheetAvatarText}>
+                    {me.name.slice(0, 1).toUpperCase()}
+                  </Text>
+                )}
+              </BouncyPressable>
+
+              <View style={styles.profileBlockInfo}>
+                <Text style={styles.profileBlockName}>{me.name} (Kamu)</Text>
+                <Text style={styles.profileBlockHint}>
+                  {me.avatarUri ? 'Tap foto untuk lihat penuh' : 'Belum ada foto profil'}
+                </Text>
+                <View style={styles.profileActionPills}>
+                  <BouncyPressable
+                    onPress={() => void handleChangeAvatar(activePartnerId, 'camera')}
+                    style={styles.profilePillPrimary}>
+                    <Camera size={13} color={Pastel.coralDark} />
+                    <Text style={styles.profilePillPrimaryText}>Kamera</Text>
+                  </BouncyPressable>
+                  <BouncyPressable
+                    onPress={() => void handleChangeAvatar(activePartnerId, 'gallery')}
+                    style={styles.profilePillSoft}>
+                    <ImagePlus size={13} color={Pastel.text} />
+                    <Text style={styles.profilePillSoftText}>Galeri</Text>
+                  </BouncyPressable>
+                  {me.avatarUri ? (
+                    <BouncyPressable
+                      onPress={() => handleRemoveAvatar(activePartnerId)}
+                      style={styles.profilePillIcon}>
+                      <Trash2 size={13} color={Pastel.coralDark} />
+                    </BouncyPressable>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Long-Press Message Action Sheet */}
       <Modal
@@ -586,6 +830,11 @@ export default function ChatScreen() {
         visible={syncModalVisible}
         onClose={() => setSyncModalVisible(false)}
       />
+
+      <PhotoLightboxModal
+        photo={lightboxPhoto}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -619,18 +868,34 @@ const styles = StyleSheet.create({
     gap: 11,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
   },
   avatarText: {
     fontFamily: BodyFontBold,
     fontSize: 18,
     lineHeight: 24,
     color: Pastel.pureWhite,
+  },
+  avatarCamBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: Pastel.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   onlineDot: {
     position: 'absolute',
@@ -649,20 +914,23 @@ const styles = StyleSheet.create({
   },
   partnerName: {
     fontFamily: BodyFontBold,
-    fontSize: 16,
+    fontSize: 15.5,
     lineHeight: 22,
     color: Pastel.text,
+    paddingRight: 2,
   },
   partnerSub: {
     fontFamily: BodyFontRegular,
     fontSize: 12,
     lineHeight: 17,
     color: Pastel.textMuted,
+    paddingRight: 2,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   iconPill: {
     width: 36,
@@ -680,17 +948,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     backgroundColor: Pastel.bgMuted,
-    paddingHorizontal: 11,
+    paddingHorizontal: 10,
     height: 36,
     borderRadius: 999,
-    maxWidth: 108,
+    flexShrink: 0,
   },
   switchText: {
     fontFamily: BodyFontBold,
     fontSize: 12.5,
     lineHeight: 18,
     color: Pastel.text,
-    flexShrink: 1,
+    paddingRight: 2,
   },
   listWrap: {
     flex: 1,
@@ -770,10 +1038,26 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: Pastel.textMuted,
   },
+  chatImageTap: {
+    position: 'relative',
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
   chatImage: {
     width: 215,
     height: 168,
     borderRadius: 14,
+  },
+  imageExpandPill: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(18, 20, 28, 0.56)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stickerMsg: {
     fontSize: 42,
@@ -824,7 +1108,7 @@ const styles = StyleSheet.create({
   },
   composerOuter: {
     backgroundColor: Pastel.bgElevated,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingTop: 10,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -890,12 +1174,12 @@ const styles = StyleSheet.create({
   composerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 6,
   },
   mediaBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -905,21 +1189,21 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 38,
     maxHeight: 112,
     backgroundColor: Pastel.bgMuted,
-    borderRadius: 21,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: 19,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     fontFamily: RoundedFont,
     fontSize: 14.5,
     lineHeight: 20,
     color: Pastel.text,
   },
   sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: Pastel.coral,
     alignItems: 'center',
     justifyContent: 'center',
@@ -930,6 +1214,117 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  profileSheet: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 26,
+    padding: 18,
+    gap: 14,
+  },
+  profileSheetTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  profileSheetTitle: {
+    fontFamily: BodyFontBold,
+    fontSize: 17,
+    lineHeight: 24,
+    color: Pastel.text,
+  },
+  profileSheetClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Pastel.bgMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Pastel.bg,
+    borderRadius: 20,
+    padding: 12,
+  },
+  sheetAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  sheetAvatarText: {
+    fontFamily: BodyFontBold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: Pastel.pureWhite,
+  },
+  profileBlockInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  profileBlockName: {
+    fontFamily: BodyFontBold,
+    fontSize: 14.5,
+    lineHeight: 20,
+    color: Pastel.text,
+  },
+  profileBlockHint: {
+    fontFamily: BodyFontRegular,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.textMuted,
+  },
+  profileActionPills: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  profilePillPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Pastel.coralSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  profilePillPrimaryText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.coralDark,
+  },
+  profilePillSoft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Pastel.bgElevated,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  profilePillSoftText: {
+    fontFamily: BodyFontSemi,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.text,
+  },
+  profilePillIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Pastel.coralSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionSheet: {
     width: '100%',

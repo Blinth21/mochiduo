@@ -1,13 +1,17 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeftRight,
   Bell,
+  Camera,
   ChevronRight,
   Cloud,
   Heart,
+  ImagePlus,
   MapPin,
   Pin,
   Send,
+  Trash2,
   X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -38,6 +42,10 @@ import { MochiBrandMark } from '@/components/MochiBrandMark';
 import { MochiMascot } from '@/components/MochiMascot';
 import { NotificationCenterModal } from '@/components/NotificationCenterModal';
 import {
+  type PhotoLightboxData,
+  PhotoLightboxModal,
+} from '@/components/PhotoLightboxModal';
+import {
   BodyFontBold,
   BodyFontRegular,
   BodyFontSemi,
@@ -49,10 +57,11 @@ import {
   SoftShadowSm,
 } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
-import type { MoodId } from '@/types/couple';
+import type { MoodId, PartnerId } from '@/types/couple';
 import { formatRelativeTime } from '@/utils/dateCalc';
 import { formatDistanceId, getDistanceMeters } from '@/utils/geoCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
+import { pickImageFromGallery, takePhotoWithCamera } from '@/utils/mediaPicker';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -77,6 +86,7 @@ export default function HomeScreen() {
   const updateStatusText = useCoupleStore((s) => s.updateStatusText);
   const sendHug = useCoupleStore((s) => s.sendHug);
   const updateCoupleSettings = useCoupleStore((s) => s.updateCoupleSettings);
+  const updatePartnerAvatar = useCoupleStore((s) => s.updatePartnerAvatar);
 
   const activePartner = activePartnerId === 'p1' ? p1 : p2;
   const partnerOther = activePartnerId === 'p1' ? p2 : p1;
@@ -92,6 +102,7 @@ export default function HomeScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [notifModalVisible, setNotifModalVisible] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<PhotoLightboxData | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
@@ -186,6 +197,27 @@ export default function HomeScreen() {
     setEditModalVisible(true);
   }, [anniversaryDate, coupleTitle, p1.name, p1.nickname, p2.name, p2.nickname]);
 
+  const handleChangeAvatar = useCallback(
+    async (partnerId: PartnerId, source: 'camera' | 'gallery') => {
+      const uri =
+        source === 'camera'
+          ? await takePhotoWithCamera({ aspect: [1, 1], quality: 0.28 })
+          : await pickImageFromGallery({ aspect: [1, 1], quality: 0.28 });
+      if (!uri) return;
+      triggerSuccessHaptic();
+      updatePartnerAvatar(partnerId, uri);
+    },
+    [updatePartnerAvatar]
+  );
+
+  const handleRemoveAvatar = useCallback(
+    (partnerId: PartnerId) => {
+      triggerMediumHaptic();
+      updatePartnerAvatar(partnerId, undefined);
+    },
+    [updatePartnerAvatar]
+  );
+
   const handleSaveSettings = useCallback(() => {
     triggerSuccessHaptic();
     updateCoupleSettings({
@@ -241,7 +273,7 @@ export default function HomeScreen() {
           <View style={styles.headerRow}>
             <View style={styles.brandWrap}>
               <MochiBrandMark
-                size={36}
+                size={32}
                 showWordmark
                 subtitle={`Hai, ${activePartner.nickname}`}
               />
@@ -252,10 +284,10 @@ export default function HomeScreen() {
                 onPress={() => setNotifModalVisible(true)}
                 style={[styles.circleBtn, SoftShadowSm]}
                 accessibilityLabel="Pusat Notifikasi">
-                <Bell size={17} color={Pastel.text} />
+                <Bell size={16} color={Pastel.text} />
                 {unreadNotifCount > 0 ? (
                   <View style={styles.bellBadge}>
-                    <Text style={styles.bellBadgeText}>
+                    <Text style={styles.bellBadgeText} maxFontSizeMultiplier={1.1}>
                       {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
                     </Text>
                   </View>
@@ -270,15 +302,18 @@ export default function HomeScreen() {
                   isLive && styles.circleBtnLive,
                 ]}
                 accessibilityLabel="Live Sync 2 HP">
-                <Cloud size={17} color={isLive ? Pastel.matcha : Pastel.textMuted} />
+                <Cloud size={16} color={isLive ? Pastel.matcha : Pastel.textMuted} />
                 {isLive ? <View style={styles.liveDot} /> : null}
               </BouncyPressable>
 
               <BouncyPressable
                 onPress={handleTogglePartner}
                 style={[styles.switchPill, SoftShadowSm]}>
-                <ArrowLeftRight size={13} color={Pastel.coral} />
-                <Text style={styles.switchPillText} numberOfLines={1}>
+                <ArrowLeftRight size={12} color={Pastel.coral} />
+                <Text
+                  style={styles.switchPillText}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.15}>
                   {activePartner.name}
                 </Text>
               </BouncyPressable>
@@ -293,12 +328,41 @@ export default function HomeScreen() {
             {/* Partner 1 Bento Card */}
             <View style={[styles.partnerBento, SoftShadow]}>
               <View style={styles.partnerTopRow}>
-                <Text style={styles.partnerName} numberOfLines={1}>
-                  {p1.name}
-                </Text>
+                <BouncyPressable
+                  onPress={() => {
+                    if (p1.avatarUri) {
+                      setLightboxPhoto({
+                        uri: p1.avatarUri,
+                        title: p1.name,
+                        subtitle: `Panggilan: ${p1.nickname}`,
+                      });
+                    } else {
+                      openEditModal();
+                    }
+                  }}
+                  style={styles.partnerIdentRow}>
+                  {p1.avatarUri ? (
+                    <Image
+                      source={{ uri: p1.avatarUri }}
+                      style={styles.miniAvatar}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : null}
+                  <Text
+                    style={styles.partnerName}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.84}
+                    maxFontSizeMultiplier={1.15}>
+                    {p1.name}
+                  </Text>
+                </BouncyPressable>
                 {activePartnerId === 'p1' ? (
                   <View style={styles.youBadge}>
-                    <Text style={styles.youBadgeText}>Kamu</Text>
+                    <Text style={styles.youBadgeText} maxFontSizeMultiplier={1.1}>
+                      Kamu
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -314,7 +378,9 @@ export default function HomeScreen() {
 
               <View style={[styles.moodPill, { backgroundColor: p1MoodObj.bg }]}>
                 <Text style={styles.moodPillEmoji}>{p1MoodObj.emoji}</Text>
-                <Text style={[styles.moodPillLabel, { color: p1MoodObj.accent }]}>
+                <Text
+                  style={[styles.moodPillLabel, { color: p1MoodObj.accent }]}
+                  maxFontSizeMultiplier={1.15}>
                   {p1MoodObj.label}
                 </Text>
               </View>
@@ -330,12 +396,41 @@ export default function HomeScreen() {
             {/* Partner 2 Bento Card */}
             <View style={[styles.partnerBento, SoftShadow]}>
               <View style={styles.partnerTopRow}>
-                <Text style={styles.partnerName} numberOfLines={1}>
-                  {p2.name}
-                </Text>
+                <BouncyPressable
+                  onPress={() => {
+                    if (p2.avatarUri) {
+                      setLightboxPhoto({
+                        uri: p2.avatarUri,
+                        title: p2.name,
+                        subtitle: `Panggilan: ${p2.nickname}`,
+                      });
+                    } else {
+                      openEditModal();
+                    }
+                  }}
+                  style={styles.partnerIdentRow}>
+                  {p2.avatarUri ? (
+                    <Image
+                      source={{ uri: p2.avatarUri }}
+                      style={styles.miniAvatar}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : null}
+                  <Text
+                    style={styles.partnerName}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.84}
+                    maxFontSizeMultiplier={1.15}>
+                    {p2.name}
+                  </Text>
+                </BouncyPressable>
                 {activePartnerId === 'p2' ? (
                   <View style={styles.youBadge}>
-                    <Text style={styles.youBadgeText}>Kamu</Text>
+                    <Text style={styles.youBadgeText} maxFontSizeMultiplier={1.1}>
+                      Kamu
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -352,7 +447,9 @@ export default function HomeScreen() {
 
               <View style={[styles.moodPill, { backgroundColor: p2MoodObj.bg }]}>
                 <Text style={styles.moodPillEmoji}>{p2MoodObj.emoji}</Text>
-                <Text style={[styles.moodPillLabel, { color: p2MoodObj.accent }]}>
+                <Text
+                  style={[styles.moodPillLabel, { color: p2MoodObj.accent }]}
+                  maxFontSizeMultiplier={1.15}>
                   {p2MoodObj.label}
                 </Text>
               </View>
@@ -380,12 +477,17 @@ export default function HomeScreen() {
                 <Animated.View style={hugIconAnim}>
                   <Heart size={18} color={Pastel.pureWhite} fill={Pastel.pureWhite} />
                 </Animated.View>
-                <Text style={styles.hugButtonText} numberOfLines={1}>
+                <Text
+                  style={styles.hugButtonText}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.2}>
                   Kirim Peluk ke {partnerOther.name}
                 </Text>
               </View>
               <View style={styles.hugCounterPill}>
-                <Text style={styles.hugCounterText}>{hugCount}</Text>
+                <Text style={styles.hugCounterText} maxFontSizeMultiplier={1.15}>
+                  {hugCount}
+                </Text>
               </View>
             </BouncyPressable>
 
@@ -405,12 +507,16 @@ export default function HomeScreen() {
             </View>
             <View style={styles.locationInfo}>
               <View style={styles.locationTitleRow}>
-                <Text style={styles.locationTitle}>Lokasi Berdua</Text>
+                <Text style={styles.locationTitle} maxFontSizeMultiplier={1.2}>
+                  Lokasi Berdua
+                </Text>
                 <View style={styles.distancePill}>
-                  <Text style={styles.distancePillText}>{distanceLabel}</Text>
+                  <Text style={styles.distancePillText} maxFontSizeMultiplier={1.15}>
+                    {distanceLabel}
+                  </Text>
                 </View>
               </View>
-              <Text style={styles.locationSub} numberOfLines={1}>
+              <Text style={styles.locationSub} numberOfLines={2}>
                 {partnerLoc.isSharing
                   ? `${partnerOther.name} di ${partnerLoc.areaName}`
                   : `${partnerOther.name} mengaktifkan mode privasi`}
@@ -448,7 +554,8 @@ export default function HomeScreen() {
                       style={[
                         styles.moodChipLabel,
                         selected && { color: mood.accent, fontFamily: BodyFontBold },
-                      ]}>
+                      ]}
+                      maxFontSizeMultiplier={1.15}>
                       {mood.label}
                     </Text>
                   </BouncyPressable>
@@ -495,7 +602,9 @@ export default function HomeScreen() {
               <View style={styles.pinnedTop}>
                 <View style={styles.pinnedAuthorPill}>
                   <Pin size={12} color={pinnedPalette.accent} />
-                  <Text style={[styles.pinnedBadgeText, { color: pinnedPalette.accent }]}>
+                  <Text
+                    style={[styles.pinnedBadgeText, { color: pinnedPalette.accent }]}
+                    maxFontSizeMultiplier={1.15}>
                     Catatan dari {pinnedNote.authorId === 'p1' ? p1.name : p2.name}
                   </Text>
                 </View>
@@ -534,6 +643,70 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.modalBody}>
+          {/* Partner Profile Photos */}
+          <Text style={styles.inputLabel}>Foto Profil Berdua</Text>
+          <View style={styles.avatarEditorRow}>
+            {([
+              { id: 'p1' as PartnerId, profile: p1, tint: Pastel.coral },
+              { id: 'p2' as PartnerId, profile: p2, tint: Pastel.matcha },
+            ]).map(({ id, profile, tint }) => (
+              <View key={id} style={styles.avatarEditorCard}>
+                <BouncyPressable
+                  onPress={() => {
+                    if (profile.avatarUri) {
+                      setEditModalVisible(false);
+                      setLightboxPhoto({
+                        uri: profile.avatarUri,
+                        title: profile.name,
+                        subtitle: `Panggilan: ${profile.nickname}`,
+                      });
+                    }
+                  }}
+                  style={[styles.avatarPreviewCircle, { backgroundColor: tint }]}>
+                  {profile.avatarUri ? (
+                    <Image
+                      source={{ uri: profile.avatarUri }}
+                      style={styles.avatarPreviewImg}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <Text style={styles.avatarPreviewInitial}>
+                      {profile.name.slice(0, 1).toUpperCase()}
+                    </Text>
+                  )}
+                </BouncyPressable>
+
+                <Text style={styles.avatarEditorName} numberOfLines={1}>
+                  {profile.name}
+                </Text>
+
+                <View style={styles.avatarEditorBtns}>
+                  <BouncyPressable
+                    onPress={() => void handleChangeAvatar(id, 'camera')}
+                    style={styles.avatarIconBtn}
+                    accessibilityLabel={`Ambil foto profil ${profile.name}`}>
+                    <Camera size={14} color={Pastel.coralDark} />
+                  </BouncyPressable>
+                  <BouncyPressable
+                    onPress={() => void handleChangeAvatar(id, 'gallery')}
+                    style={styles.avatarIconBtn}
+                    accessibilityLabel={`Pilih foto galeri ${profile.name}`}>
+                    <ImagePlus size={14} color={Pastel.text} />
+                  </BouncyPressable>
+                  {profile.avatarUri ? (
+                    <BouncyPressable
+                      onPress={() => handleRemoveAvatar(id)}
+                      style={styles.avatarIconBtnDanger}
+                      accessibilityLabel={`Hapus foto profil ${profile.name}`}>
+                      <Trash2 size={14} color={Pastel.coralDark} />
+                    </BouncyPressable>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+
           <Text style={styles.inputLabel}>Nama Couple Kalian</Text>
           <TextInput
             value={formTitle}
@@ -603,6 +776,11 @@ export default function HomeScreen() {
         visible={notifModalVisible}
         onClose={() => setNotifModalVisible(false)}
       />
+
+      <PhotoLightboxModal
+        photo={lightboxPhoto}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -630,7 +808,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
     paddingBottom: 2,
   },
   brandWrap: {
@@ -640,12 +818,13 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   circleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Pastel.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
@@ -656,8 +835,8 @@ const styles = StyleSheet.create({
   },
   liveDot: {
     position: 'absolute',
-    top: 7,
-    right: 7,
+    top: 6,
+    right: 6,
     width: 8,
     height: 8,
     borderRadius: 4,
@@ -684,19 +863,19 @@ const styles = StyleSheet.create({
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: Pastel.bgElevated,
-    paddingHorizontal: 12,
-    height: 38,
+    paddingHorizontal: 10,
+    height: 36,
     borderRadius: 999,
-    maxWidth: 116,
+    flexShrink: 0,
   },
   switchPillText: {
     fontFamily: BodyFontBold,
-    fontSize: 13,
+    fontSize: 12.5,
     lineHeight: 18,
     color: Pastel.text,
-    flexShrink: 1,
+    paddingRight: 2,
   },
   duoGrid: {
     flexDirection: 'row',
@@ -717,24 +896,40 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 6,
   },
+  partnerIdentRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
+  },
+  miniAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
   partnerName: {
     fontFamily: BodyFontBold,
     fontSize: 15,
     lineHeight: 21,
     color: Pastel.text,
     flexShrink: 1,
+    paddingRight: 2,
   },
   youBadge: {
     backgroundColor: Pastel.coralSoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
+    flexShrink: 0,
   },
   youBadgeText: {
     fontFamily: BodyFontBold,
     fontSize: 10.5,
     lineHeight: 15,
     color: Pastel.coralDark,
+    paddingRight: 1,
   },
   mascotStage: {
     paddingVertical: 2,
@@ -745,7 +940,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 999,
   },
@@ -757,6 +952,7 @@ const styles = StyleSheet.create({
     fontFamily: BodyFontBold,
     fontSize: 12,
     lineHeight: 17,
+    paddingRight: 2,
   },
   quotePill: {
     width: '100%',
@@ -828,18 +1024,21 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: Pastel.pureWhite,
     flexShrink: 1,
+    paddingRight: 2,
   },
   hugCounterPill: {
     backgroundColor: 'rgba(255,255,255,0.24)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
+    flexShrink: 0,
   },
   hugCounterText: {
     fontFamily: BodyFontBold,
     fontSize: 13,
     lineHeight: 18,
     color: Pastel.pureWhite,
+    paddingRight: 1,
   },
   lastHugHint: {
     fontFamily: RoundedFont,
@@ -862,6 +1061,7 @@ const styles = StyleSheet.create({
     backgroundColor: Pastel.matchaSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   locationInfo: {
     flex: 1,
@@ -870,25 +1070,29 @@ const styles = StyleSheet.create({
   locationTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   locationTitle: {
     fontFamily: BodyFontBold,
     fontSize: 14.5,
     lineHeight: 20,
     color: Pastel.text,
+    paddingRight: 2,
   },
   distancePill: {
     backgroundColor: Pastel.matchaSoft,
     paddingHorizontal: 9,
     paddingVertical: 2,
     borderRadius: 999,
+    flexShrink: 0,
   },
   distancePillText: {
     fontFamily: BodyFontBold,
     fontSize: 11.5,
     lineHeight: 16,
     color: Pastel.matcha,
+    paddingRight: 2,
   },
   locationSub: {
     fontFamily: BodyFontRegular,
@@ -903,6 +1107,7 @@ const styles = StyleSheet.create({
     backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   composerCard: {
     backgroundColor: Pastel.bgElevated,
@@ -937,6 +1142,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: Pastel.textMuted,
+    paddingRight: 2,
   },
   statusInputRow: {
     flexDirection: 'row',
@@ -981,11 +1187,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 999,
+    flexShrink: 1,
   },
   pinnedBadgeText: {
     fontFamily: BodyFontBold,
     fontSize: 12,
     lineHeight: 17,
+    paddingRight: 2,
   },
   pinnedSticker: {
     fontSize: 22,
@@ -1042,6 +1250,64 @@ const styles = StyleSheet.create({
   modalBody: {
     gap: 10,
     paddingBottom: 20,
+  },
+  avatarEditorRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 4,
+  },
+  avatarEditorCard: {
+    flex: 1,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 20,
+    padding: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  avatarPreviewCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarPreviewImg: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPreviewInitial: {
+    fontFamily: BodyFontBold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: Pastel.pureWhite,
+  },
+  avatarEditorName: {
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: Pastel.text,
+  },
+  avatarEditorBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  avatarIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Pastel.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarIconBtnDanger: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Pastel.coralSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inputLabel: {
     fontFamily: BodyFontSemi,

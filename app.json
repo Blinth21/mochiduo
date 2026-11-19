@@ -15,6 +15,7 @@
       "package": "com.mochiduo.app",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -33,6 +34,26 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withHighRefreshRate",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./node_modules/@expo-google-fonts/plus-jakarta-sans/400Regular/PlusJakartaSans_400Regular.ttf",
+            "./node_modules/@expo-google-fonts/plus-jakarta-sans/500Medium/PlusJakartaSans_500Medium.ttf",
+            "./node_modules/@expo-google-fonts/plus-jakarta-sans/600SemiBold/PlusJakartaSans_600SemiBold.ttf",
+            "./node_modules/@expo-google-fonts/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Izinkan MochiDuo mengakses galeri untuk memilih foto profil, chat, dan kenangan.",
+          "cameraPermission": "Izinkan MochiDuo menggunakan kamera untuk mengambil foto langsung di chat, album kenangan, dan foto profil.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {

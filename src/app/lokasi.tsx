@@ -172,7 +172,9 @@ export default function LokasiScreen() {
           {/* Airy Header */}
           <View style={styles.headerRow}>
             <View style={styles.headerCopy}>
-              <Text style={styles.pageTitle}>Lokasi Berdua</Text>
+              <Text style={styles.pageTitle} maxFontSizeMultiplier={1.2}>
+                Lokasi Berdua
+              </Text>
               <View style={styles.statusSubRow}>
                 <View
                   style={[
@@ -185,7 +187,7 @@ export default function LokasiScreen() {
                     },
                   ]}
                 />
-                <Text style={styles.pageSub} numberOfLines={1}>
+                <Text style={styles.pageSub} numberOfLines={1} maxFontSizeMultiplier={1.15}>
                   {liveWatchEnabled && myLoc.isSharing
                     ? 'GPS Real-Time aktif · tiap 5 dtk'
                     : 'Mode hemat · update manual'}
@@ -196,8 +198,8 @@ export default function LokasiScreen() {
             <BouncyPressable
               onPress={handleSwitchPartner}
               style={[styles.switchPill, SoftShadowSm]}>
-              <ArrowLeftRight size={13} color={Pastel.coral} />
-              <Text style={styles.switchPillText} numberOfLines={1}>
+              <ArrowLeftRight size={12} color={Pastel.coral} />
+              <Text style={styles.switchPillText} numberOfLines={1} maxFontSizeMultiplier={1.15}>
                 {me.name}
               </Text>
             </BouncyPressable>
@@ -493,19 +495,19 @@ const styles = StyleSheet.create({
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: Pastel.bgElevated,
-    paddingHorizontal: 12,
-    height: 38,
+    paddingHorizontal: 11,
+    height: 36,
     borderRadius: 999,
-    maxWidth: 116,
+    flexShrink: 0,
   },
   switchPillText: {
     fontFamily: BodyFontBold,
-    fontSize: 13,
+    fontSize: 12.5,
     lineHeight: 18,
     color: Pastel.text,
-    flexShrink: 1,
+    paddingRight: 2,
   },
   viewSwitchRow: {
     flexDirection: 'row',
@@ -546,6 +548,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 8,
   },
   sectionTitle: {

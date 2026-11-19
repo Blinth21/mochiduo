@@ -86,11 +86,19 @@ export const MochiBrandMark = React.memo(function MochiBrandMark({
 
       {showWordmark ? (
         <View style={styles.wordmarkCol}>
-          <Text style={styles.wordmark} numberOfLines={1}>
+          <Text
+            style={styles.wordmark}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.84}
+            maxFontSizeMultiplier={1.15}>
             MochiDuo
           </Text>
           {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text
+              style={styles.subtitle}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.15}>
               {subtitle}
             </Text>
           ) : null}
@@ -104,14 +112,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     flexShrink: 1,
   },
   iconPill: {
     backgroundColor: '#FFF6F4',
-    borderRadius: 14,
-    paddingHorizontal: 6,
+    borderRadius: 13,
+    paddingHorizontal: 5,
     paddingVertical: 4,
+    flexShrink: 0,
   },
   wordmarkCol: {
     flexShrink: 1,
@@ -119,14 +128,16 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     fontFamily: BodyFontBold,
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16.5,
+    lineHeight: 22,
     color: Pastel.text,
+    paddingRight: 2,
   },
   subtitle: {
     fontFamily: RoundedFont,
-    fontSize: 12,
+    fontSize: 11.5,
     lineHeight: 16,
     color: Pastel.textMuted,
+    paddingRight: 2,
   },
 });

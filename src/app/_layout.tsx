@@ -199,6 +199,17 @@ function LiveLocationWatcher() {
             lastGeocodeRef.current = { lat, lon, area: areaName, at: nowMs };
           }
 
+          const currentLoc = useCoupleStore.getState().locations[activePartnerId];
+          const movedFromStored = getDistanceMeters(
+            currentLoc.latitude,
+            currentLoc.longitude,
+            lat,
+            lon
+          );
+          if (movedFromStored < 4 && currentLoc.areaName === areaName && nowMs - currentLoc.updatedAt < 25000) {
+            return;
+          }
+
           const shouldSkipDbPush = nowMs - lastDbPushAtRef.current < 4000;
           if (!shouldSkipDbPush) {
             lastDbPushAtRef.current = nowMs;
@@ -313,19 +324,28 @@ export default function RootLayout() {
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
   });
+  const [fontFallbackReady, setFontFallbackReady] = React.useState(false);
+
+  const isReady = fontsLoaded || Boolean(fontError) || fontFallbackReady;
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (isReady) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontError, fontsLoaded]);
+  }, [isReady]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
-    }, 1500);
+      setFontFallbackReady(true);
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
+
+  // Wait until Plus Jakarta Sans is registered so Android Yoga never measures
+  // text widths with fallback Roboto and clips the last characters.
+  if (!isReady) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>

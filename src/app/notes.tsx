@@ -206,8 +206,10 @@ export default function NotesScreen() {
         {/* Clean Airy Header */}
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.pageTitle}>Love Notes</Text>
-            <Text style={styles.pageSub}>
+            <Text style={styles.pageTitle} maxFontSizeMultiplier={1.2}>
+              Love Notes
+            </Text>
+            <Text style={styles.pageSub} maxFontSizeMultiplier={1.2}>
               {loveNotes.length} catatan manis · menulis sebagai {activePartner.name}
             </Text>
           </View>
@@ -216,7 +218,9 @@ export default function NotesScreen() {
             onPress={() => setModalVisible(true)}
             style={styles.addBtn}>
             <Plus size={16} color={Pastel.pureWhite} />
-            <Text style={styles.addBtnText}>Tulis</Text>
+            <Text style={styles.addBtnText} maxFontSizeMultiplier={1.15}>
+              Tulis
+            </Text>
           </BouncyPressable>
         </View>
 
@@ -246,7 +250,8 @@ export default function NotesScreen() {
                     style={[
                       styles.filterChipText,
                       active && styles.filterChipTextActive,
-                    ]}>
+                    ]}
+                    maxFontSizeMultiplier={1.15}>
                     {tab.label}
                   </Text>
                 </BouncyPressable>
@@ -261,6 +266,7 @@ export default function NotesScreen() {
             data={filteredNotes}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
+            drawDistance={450}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
@@ -523,6 +529,7 @@ const styles = StyleSheet.create({
   reactionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 7,
   },
   reactBtn: {

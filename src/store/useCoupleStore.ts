@@ -114,17 +114,30 @@ export const CURATED_DATE_IDEAS: DateIdea[] = [
   },
 ];
 
+const pendingStorageTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 const safeStorage: StateStorage = {
   getItem: async (name) => {
     if (Platform.OS === 'web' && typeof window === 'undefined') return null;
     return AsyncStorage.getItem(name);
   },
-  setItem: async (name, value) => {
+  setItem: (name, value) => {
     if (Platform.OS === 'web' && typeof window === 'undefined') return;
-    await AsyncStorage.setItem(name, value);
+    const prev = pendingStorageTimers.get(name);
+    if (prev) clearTimeout(prev);
+    const timer = setTimeout(() => {
+      pendingStorageTimers.delete(name);
+      void AsyncStorage.setItem(name, value).catch(() => {});
+    }, 700);
+    pendingStorageTimers.set(name, timer);
   },
   removeItem: async (name) => {
     if (Platform.OS === 'web' && typeof window === 'undefined') return;
+    const prev = pendingStorageTimers.get(name);
+    if (prev) {
+      clearTimeout(prev);
+      pendingStorageTimers.delete(name);
+    }
     await AsyncStorage.removeItem(name);
   },
 };
@@ -181,6 +194,7 @@ interface CoupleState {
     p2Name: string;
     p2Nickname: string;
   }) => void;
+  updatePartnerAvatar: (partnerId: PartnerId, avatarUri?: string) => void;
   updateMood: (partnerId: PartnerId, mood: MoodId, customStatus?: string) => void;
   updateStatusText: (partnerId: PartnerId, statusText: string) => void;
   sendHug: (fromId: PartnerId) => void;
@@ -540,6 +554,24 @@ export const useCoupleStore = create<CoupleState>()(
           };
         });
       },
+
+      updatePartnerAvatar: (partnerId, avatarUri) =>
+        set((state) => {
+          const nextProfile: PartnerProfile = {
+            ...state.partners[partnerId],
+            avatarUri,
+            updatedAt: Date.now(),
+          };
+          const col = partnerId === 'p1' ? 'p1_profile' : 'p2_profile';
+          void pushRoomFields(state.syncConfig, { [col]: nextProfile });
+
+          return {
+            partners: {
+              ...state.partners,
+              [partnerId]: nextProfile,
+            },
+          };
+        }),
 
       updateMood: (partnerId, mood, customStatus) =>
         set((state) => {

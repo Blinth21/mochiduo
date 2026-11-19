@@ -10,6 +10,7 @@ export interface PartnerProfile {
   id: PartnerId;
   name: string;
   nickname: string;
+  avatarUri?: string;
   mochiColor: string;
   auraColor: string;
   mood: MoodId;

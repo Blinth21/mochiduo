@@ -228,8 +228,10 @@ export default function DatesScreen() {
         {/* Clean Airy Header */}
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.pageTitle}>Kencan & Bucket List</Text>
-            <Text style={styles.pageSub}>
+            <Text style={styles.pageTitle} maxFontSizeMultiplier={1.2}>
+              Kencan &amp; Bucket List
+            </Text>
+            <Text style={styles.pageSub} maxFontSizeMultiplier={1.2}>
               {doneCount} dari {totalCount} tercapai · {progressPct}% selesai
             </Text>
           </View>
@@ -238,7 +240,9 @@ export default function DatesScreen() {
             onPress={() => setModalVisible(true)}
             style={styles.addBtn}>
             <Plus size={16} color={Pastel.pureWhite} />
-            <Text style={styles.addBtnText}>Rencana</Text>
+            <Text style={styles.addBtnText} maxFontSizeMultiplier={1.15}>
+              Rencana
+            </Text>
           </BouncyPressable>
         </View>
 
@@ -257,7 +261,7 @@ export default function DatesScreen() {
           <View style={styles.rouletteTop}>
             <View style={styles.roulettePill}>
               <Sparkles size={12} color={Pastel.honeyDark} />
-              <Text style={styles.roulettePillText}>
+              <Text style={styles.roulettePillText} maxFontSizeMultiplier={1.15}>
                 Ide Kencan Acak · {currentIdea.vibe}
               </Text>
             </View>
@@ -273,14 +277,18 @@ export default function DatesScreen() {
               onPress={handleSpinIdea}
               style={[styles.spinBtn, SoftShadowSm]}>
               <Dices size={15} color={Pastel.text} />
-              <Text style={styles.spinBtnText}>Acak Ide</Text>
+              <Text style={styles.spinBtnText} maxFontSizeMultiplier={1.15}>
+                Acak Ide
+              </Text>
             </BouncyPressable>
 
             <BouncyPressable
               onPress={handleAddIdeaToBucket}
               style={styles.acceptIdeaBtn}>
               <Plus size={15} color={Pastel.pureWhite} />
-              <Text style={styles.acceptIdeaText}>Masuk List</Text>
+              <Text style={styles.acceptIdeaText} maxFontSizeMultiplier={1.15}>
+                Masuk List
+              </Text>
             </BouncyPressable>
           </View>
         </Animated.View>
@@ -305,7 +313,11 @@ export default function DatesScreen() {
                   style={[
                     styles.filterTabText,
                     active && styles.filterTabTextActive,
-                  ]}>
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                  maxFontSizeMultiplier={1.15}>
                   {tab.label}
                 </Text>
               </BouncyPressable>
@@ -319,6 +331,7 @@ export default function DatesScreen() {
             data={filteredList}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
+            drawDistance={450}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
@@ -564,6 +577,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
+    paddingHorizontal: 4,
     borderRadius: 999,
   },
   filterTabActive: {

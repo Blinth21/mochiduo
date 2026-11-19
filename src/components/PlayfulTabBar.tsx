@@ -137,6 +137,9 @@ export const PlayfulTabBar = React.memo(function PlayfulTabBar({
 
               <Text
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                maxFontSizeMultiplier={1.15}
                 style={[
                   styles.tabLabel,
                   isFocused ? styles.tabLabelFocused : styles.tabLabelMuted,
@@ -172,19 +175,20 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 540,
     flexDirection: 'row',
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,
-    gap: 4,
+    paddingHorizontal: 1,
+    gap: 3,
   },
   iconPill: {
-    width: 44,
-    height: 32,
-    borderRadius: 16,
+    width: 42,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -211,6 +215,7 @@ const styles = StyleSheet.create({
     color: Pastel.pureWhite,
   },
   tabLabel: {
+    width: '100%',
     fontSize: 10.5,
     lineHeight: 15,
     textAlign: 'center',

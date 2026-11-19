@@ -87,7 +87,10 @@ export const MochiMascot = React.memo(function MochiMascot({
           },
         ]}
       />
-      <Animated.View style={floatStyle}>
+      <Animated.View
+        style={floatStyle}
+        renderToHardwareTextureAndroid
+        shouldRasterizeIOS>
         <Svg width={size} height={size} viewBox="0 0 100 100">
           <Defs>
             <LinearGradient id={gradId} x1="0.2" y1="0" x2="0.6" y2="1">
