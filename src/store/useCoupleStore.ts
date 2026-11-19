@@ -275,12 +275,12 @@ function createInitialSuitGame(): SuitMatchState {
   };
 }
 
-function createInitialTttGame(): TttMatchState {
+function createInitialTttGame(starter: PartnerId = 'p1'): TttMatchState {
   return {
     matchId: `ttt-${Date.now()}`,
     mode: 'bot',
     board: Array(9).fill(null) as TttCell[],
-    turn: 'p1',
+    turn: starter,
     winner: null,
     winLine: null,
     scores: { p1: 0, p2: 0 },
@@ -304,7 +304,7 @@ interface CoupleState {
   chatMessages: ChatMessage[];
 
   // Mini-games live/local board state (not persisted)
-  playSectionTab: 'suit' | 'ttt' | 'qa' | 'shop';
+  playSectionTab: 'suit' | 'ttt' | 'shop';
   suitGame: SuitMatchState;
   tttGame: TttMatchState;
 
@@ -326,7 +326,7 @@ interface CoupleState {
 
   // Actions
   setActivePartner: (id: PartnerId) => void;
-  setPlaySectionTab: (tab: 'suit' | 'ttt' | 'qa' | 'shop') => void;
+  setPlaySectionTab: (tab: 'suit' | 'ttt' | 'shop') => void;
   updateCoupleSettings: (payload: {
     coupleTitle: string;
     anniversaryDate: string;
@@ -340,7 +340,7 @@ interface CoupleState {
   updateStatusText: (partnerId: PartnerId, statusText: string) => void;
   sendHug: (fromId: PartnerId) => void;
 
-  // Engagement, Streak, Shop & Q&A actions
+  // Engagement, Streak & Shop actions
   claimDailyCheckIn: (partnerId: PartnerId) => { claimed: boolean; reward: number };
   claimDailyQuestBonus: (partnerId: PartnerId) => { claimed: boolean; reward: number };
   buyShopItem: (input: {
@@ -354,12 +354,6 @@ interface CoupleState {
     kind: 'skin' | 'accessory',
     itemId: string
   ) => void;
-  submitDailyQa: (
-    partnerId: PartnerId,
-    dateKey: string,
-    questionId: string,
-    answer: string
-  ) => { coinsEarned: number };
 
   // Mini-Game actions
   setSuitMode: (mode: SuitMode) => void;
@@ -715,7 +709,14 @@ export const useCoupleStore = create<CoupleState>()(
         },
       ],
 
-      setActivePartner: (id) => set({ activePartnerId: id }),
+      setActivePartner: (id) =>
+        set((state) => ({
+          activePartnerId: id,
+          tttGame:
+            state.tttGame.mode === 'bot' && state.tttGame.board.every((c) => c === null)
+              ? { ...state.tttGame, turn: id }
+              : state.tttGame,
+        })),
 
       setPlaySectionTab: (tab) => set({ playSectionTab: tab }),
 
@@ -1000,39 +1001,6 @@ export const useCoupleStore = create<CoupleState>()(
           };
         }),
 
-      submitDailyQa: (partnerId, dateKey, questionId, answer) => {
-        const trimmed = answer.trim();
-        if (!trimmed) return { coinsEarned: 0 };
-        const prev = get();
-        const currentProfile = prev.partners[partnerId];
-        const prevQa = currentProfile.qaResponses ?? {};
-        const nextQa = {
-          ...prevQa,
-          [dateKey]: {
-            questionId,
-            answer: trimmed,
-            answeredAt: Date.now(),
-          },
-        };
-        const { nextProfile, earned } = applyProfileEngagement(
-          { ...currentProfile, qaResponses: nextQa },
-          {
-            dateKey,
-            missionId: 'qa',
-            missionCoins: 25,
-          }
-        );
-        const col = partnerId === 'p1' ? 'p1_profile' : 'p2_profile';
-        void pushRoomFields(prev.syncConfig, { [col]: nextProfile });
-        set((state) => ({
-          partners: {
-            ...state.partners,
-            [partnerId]: nextProfile,
-          },
-        }));
-        return { coinsEarned: earned };
-      },
-
       setSuitMode: (mode) =>
         set(() => ({
           suitGame: {
@@ -1152,9 +1120,9 @@ export const useCoupleStore = create<CoupleState>()(
       },
 
       setTttMode: (mode) =>
-        set(() => ({
+        set((state) => ({
           tttGame: {
-            ...createInitialTttGame(),
+            ...createInitialTttGame(mode === 'bot' ? state.activePartnerId : 'p1'),
             mode,
           },
         })),
@@ -1163,11 +1131,12 @@ export const useCoupleStore = create<CoupleState>()(
         const prev = get();
         const game = prev.tttGame;
         const me = prev.activePartnerId;
+        const isBoardEmpty = game.board.every((c) => c === null);
         const player = actorId ?? (game.mode === 'local' ? game.turn : me);
 
         if (game.winner || game.board[index] !== null) return;
         if (game.mode === 'live' && game.turn !== me) return;
-        if (game.mode === 'bot' && game.turn !== me) return;
+        if (game.mode === 'bot' && game.turn !== me && !isBoardEmpty) return;
 
         const nextBoard = [...game.board];
         nextBoard[index] = player;
@@ -1932,18 +1901,6 @@ export const useCoupleStore = create<CoupleState>()(
             title: `Kado ${nextMe.latestGift.emoji} dari ${partnerName}!`,
             body: `${partnerName} menghadiahkan "${nextMe.latestGift.itemName}" buat Mochi-mu!`,
             route: '/play?tab=shop',
-          });
-        }
-
-        // Detect partner answering today's Daily Q&A
-        const todayKey = getLocalDateKey();
-        if (!prevOther.qaResponses?.[todayKey] && nextOther.qaResponses?.[todayKey]) {
-          prev.pushFeatureNotification({
-            category: 'play',
-            emoji: '❓',
-            title: `${partnerName} Jawab Q&A Hari Ini!`,
-            body: 'Buka MochiPlay & isi jawabanmu biar jawaban dia kebuka ✨',
-            route: '/play?tab=qa',
           });
         }
 

@@ -35,9 +35,9 @@ export const NotificationToast = React.memo(function NotificationToast() {
           dismissToast();
           if (targetRoute) {
             if (targetRoute.startsWith('/play')) {
-              const match = targetRoute.match(/tab=(suit|ttt|qa|shop)/);
+              const match = targetRoute.match(/tab=(suit|ttt|shop)/);
               if (match) {
-                setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'qa' | 'shop');
+                setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'shop');
               }
               router.push('/play');
             } else {

@@ -3,18 +3,19 @@ import { useRouter } from 'expo-router';
 import {
   ArrowLeftRight,
   Bell,
+  Calendar,
   Camera,
-  Check,
   ChevronRight,
   Cloud,
   Coins,
   Flame,
+  Gamepad2,
   Heart,
   ImagePlus,
   MapPin,
   Pin,
   Send,
-  Sparkles,
+  StickyNote,
   Trash2,
   X,
 } from 'lucide-react-native';
@@ -49,10 +50,7 @@ import {
   type PhotoLightboxData,
   PhotoLightboxModal,
 } from '@/components/PhotoLightboxModal';
-import {
-  computeCoupleStreak,
-  getDailyQuestion,
-} from '@/constants/mochiduoPlay';
+import { computeCoupleStreak } from '@/constants/mochiduoPlay';
 import {
   BodyFontBold,
   BodyFontRegular,
@@ -91,6 +89,7 @@ export default function HomeScreen() {
   const lastHugFrom = useCoupleStore((s) => s.lastHugFrom);
   const lastHugAt = useCoupleStore((s) => s.lastHugAt);
   const loveNotes = useCoupleStore((s) => s.loveNotes);
+  const bucketList = useCoupleStore((s) => s.bucketList);
   const coupleTitle = useCoupleStore((s) => s.coupleTitle);
   const anniversaryDate = useCoupleStore((s) => s.anniversaryDate);
   const syncConfig = useCoupleStore((s) => s.syncConfig);
@@ -107,7 +106,7 @@ export default function HomeScreen() {
   const pushFeatureNotification = useCoupleStore((s) => s.pushFeatureNotification);
 
   const openPlayTab = useCallback(
-    (tab: 'suit' | 'ttt' | 'qa' | 'shop') => {
+    (tab: 'suit' | 'ttt' | 'shop') => {
       triggerMediumHaptic();
       setPlaySectionTab(tab);
       router.push('/play');
@@ -124,7 +123,7 @@ export default function HomeScreen() {
         emoji: '🔥',
         title: 'Absen Harian Berhasil!',
         body: `Streak bertambah & kamu dapat +${res.reward} Mochi Koin 🪙`,
-        route: '/play?tab=qa',
+        route: '/play',
         systemAlert: false,
       });
     }
@@ -157,11 +156,10 @@ export default function HomeScreen() {
     () => getDailyMissionSummary(activePartner, todayKey),
     [activePartner, todayKey]
   );
-  const doneMissionsCount =
-    (missionSummary.m1CheckIn ? 1 : 0) +
-    (missionSummary.m2Interact ? 1 : 0) +
-    (missionSummary.m3PlayOrQa ? 1 : 0);
-  const todayQuestion = useMemo(() => getDailyQuestion(todayKey), [todayKey]);
+  const todoDatesCount = useMemo(
+    () => bucketList.filter((item) => !item.done).length,
+    [bucketList]
+  );
 
   const partnerLoc = activePartnerId === 'p1' ? loc2 : loc1;
   const distanceLabel =
@@ -354,10 +352,17 @@ export default function HomeScreen() {
 
             <View style={styles.headerActions}>
               <BouncyPressable
+                onPress={() => openPlayTab('suit')}
+                style={[styles.circleBtn, styles.circleBtnPlay, SoftShadowSm]}
+                accessibilityLabel="Main Game MochiPlay">
+                <Gamepad2 size={16} color={Pastel.honeyDark} />
+              </BouncyPressable>
+
+              <BouncyPressable
                 onPress={() => setNotifModalVisible(true)}
                 style={[styles.circleBtn, SoftShadowSm]}
                 accessibilityLabel="Pusat Notifikasi">
-                <Bell size={16} color={Pastel.text} />
+                <Bell size={15} color={Pastel.text} />
                 {unreadNotifCount > 0 ? (
                   <View style={styles.bellBadge}>
                     <Text style={styles.bellBadgeText} maxFontSizeMultiplier={1.1}>
@@ -375,7 +380,7 @@ export default function HomeScreen() {
                   isLive && styles.circleBtnLive,
                 ]}
                 accessibilityLabel="Live Sync 2 HP">
-                <Cloud size={16} color={isLive ? Pastel.matcha : Pastel.textMuted} />
+                <Cloud size={15} color={isLive ? Pastel.matcha : Pastel.textMuted} />
                 {isLive ? <View style={styles.liveDot} /> : null}
               </BouncyPressable>
 
@@ -390,78 +395,6 @@ export default function HomeScreen() {
                   {activePartner.name}
                 </Text>
               </BouncyPressable>
-            </View>
-          </View>
-
-          {/* 0. Instant Above-the-Fold Quick Play & Streak Strip */}
-          <View style={[styles.quickDockCard, SoftShadowSm]}>
-            <View style={styles.quickDockTopRow}>
-              <View style={styles.quickBadgeRow}>
-                <View style={styles.streakMiniPill}>
-                  <Flame size={13} color={Pastel.peach} />
-                  <Text style={styles.streakMiniText} maxFontSizeMultiplier={1.15}>
-                    {streakInfo.streak} Hari
-                  </Text>
-                </View>
-
-                <BouncyPressable
-                  onPress={() => openPlayTab('shop')}
-                  style={styles.coinsMiniPill}>
-                  <Coins size={13} color={Pastel.honeyDark} />
-                  <Text style={styles.coinsMiniText} maxFontSizeMultiplier={1.15}>
-                    {myCoins} Koin
-                  </Text>
-                </BouncyPressable>
-              </View>
-
-              {!missionSummary.m1CheckIn ? (
-                <BouncyPressable
-                  onPress={handleCheckIn}
-                  style={styles.quickAbsenBtn}>
-                  <Text style={styles.quickAbsenText} maxFontSizeMultiplier={1.15}>
-                    +20 Absen 🔥
-                  </Text>
-                </BouncyPressable>
-              ) : missionSummary.allComplete && !missionSummary.bonusClaimed ? (
-                <BouncyPressable
-                  onPress={handleClaimBonus}
-                  style={[styles.quickAbsenBtn, { backgroundColor: Pastel.matcha }]}>
-                  <Text style={styles.quickAbsenText} maxFontSizeMultiplier={1.15}>
-                    +35 Bonus 🎉
-                  </Text>
-                </BouncyPressable>
-              ) : (
-                <View style={styles.quickMissionDonePill}>
-                  <Check size={12} color={Pastel.matcha} />
-                  <Text style={styles.quickMissionDoneText} maxFontSizeMultiplier={1.15}>
-                    Misi {doneMissionsCount}/3
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.quickPlayGrid}>
-              {([
-                { id: 'suit', emoji: '✌️', label: 'Suit', bg: Pastel.coralSoft, fg: Pastel.coralDark },
-                { id: 'ttt', emoji: '🎮', label: 'XOXO', bg: Pastel.taroSoft, fg: Pastel.taro },
-                { id: 'qa', emoji: '❓', label: 'Q&A', bg: Pastel.honeySoft, fg: Pastel.honeyDark },
-                { id: 'shop', emoji: '🎨', label: 'Skin', bg: Pastel.matchaSoft, fg: Pastel.matcha },
-              ] as const).map((item) => (
-                <BouncyPressable
-                  key={item.id}
-                  onPress={() => openPlayTab(item.id)}
-                  style={[styles.quickPlayPill, { backgroundColor: item.bg }]}>
-                  <Text style={styles.quickPlayEmoji}>{item.emoji}</Text>
-                  <Text
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.82}
-                    maxFontSizeMultiplier={1.15}
-                    style={[styles.quickPlayLabel, { color: item.fg }]}>
-                    {item.label}
-                  </Text>
-                </BouncyPressable>
-              ))}
             </View>
           </View>
 
@@ -651,62 +584,85 @@ export default function HomeScreen() {
             ) : null}
           </View>
 
-          {/* 3B. Compact Q&A Hari Ini & Misi Berdua Bento */}
-          <BouncyPressable
-            onPress={() => openPlayTab('qa')}
-            style={[styles.qaSummaryCard, SoftShadow]}>
-            <View style={styles.qaSummaryTopRow}>
-              <View style={styles.qaSummaryTagPill}>
-                <Text style={styles.qaSummaryEmoji}>{todayQuestion.emoji}</Text>
-                <Text style={styles.qaSummaryTagText} maxFontSizeMultiplier={1.15}>
-                  Q&A Hari Ini
+          {/* 3B. Slim Streak & Mochi Koin Strip */}
+          <View style={[styles.streakStrip, SoftShadowSm]}>
+            <View style={styles.streakLeftRow}>
+              <View style={styles.streakPill}>
+                <Flame size={13} color={Pastel.peach} />
+                <Text style={styles.streakPillText} maxFontSizeMultiplier={1.15}>
+                  {streakInfo.streak} Hari
                 </Text>
               </View>
-              <Text style={styles.qaSummaryActionText} maxFontSizeMultiplier={1.15}>
-                {activePartner.qaResponses?.[todayKey]
-                  ? 'Lihat Cerita →'
-                  : 'Jawab +25 🪙 →'}
-              </Text>
+
+              <BouncyPressable
+                onPress={() => openPlayTab('shop')}
+                style={styles.coinsPill}>
+                <Coins size={13} color={Pastel.honeyDark} />
+                <Text style={styles.coinsPillText} maxFontSizeMultiplier={1.15}>
+                  {myCoins} Koin
+                </Text>
+              </BouncyPressable>
             </View>
 
-            <Text style={styles.qaSummaryPrompt} numberOfLines={2}>
-              {todayQuestion.prompt}
-            </Text>
+            {!missionSummary.m1CheckIn ? (
+              <BouncyPressable onPress={handleCheckIn} style={styles.absenPillBtn}>
+                <Text style={styles.absenPillText} maxFontSizeMultiplier={1.15}>
+                  +20 Absen 🔥
+                </Text>
+              </BouncyPressable>
+            ) : missionSummary.allComplete && !missionSummary.bonusClaimed ? (
+              <BouncyPressable
+                onPress={handleClaimBonus}
+                style={[styles.absenPillBtn, { backgroundColor: Pastel.matcha }]}>
+                <Text style={styles.absenPillText} maxFontSizeMultiplier={1.15}>
+                  +35 Bonus 🎉
+                </Text>
+              </BouncyPressable>
+            ) : (
+              <BouncyPressable
+                onPress={() => openPlayTab('suit')}
+                style={styles.playJumpPill}>
+                <Text style={styles.playJumpText} maxFontSizeMultiplier={1.15}>
+                  Main →
+                </Text>
+              </BouncyPressable>
+            )}
+          </View>
 
-            <Text style={styles.streakHint}>{streakInfo.statusText}</Text>
+          {/* 3C. Clean 2-Col Bento Shortcuts for Kencan & Love Notes */}
+          <View style={styles.shortcutGrid}>
+            <BouncyPressable
+              onPress={() => router.push('/dates')}
+              style={[styles.shortcutCard, SoftShadowSm]}>
+              <View style={[styles.shortcutIcon, { backgroundColor: Pastel.skySoft }]}>
+                <Calendar size={18} color={Pastel.sky} />
+              </View>
+              <View style={styles.shortcutTextCol}>
+                <Text style={styles.shortcutTitle} numberOfLines={1}>
+                  Kencan
+                </Text>
+                <Text style={styles.shortcutSub} numberOfLines={1}>
+                  {todoDatesCount > 0 ? `${todoDatesCount} rencana` : 'Semua beres ✨'}
+                </Text>
+              </View>
+            </BouncyPressable>
 
-            <View style={styles.missionsRow}>
-              {([
-                { label: 'Absen Harian', done: missionSummary.m1CheckIn },
-                { label: 'Sapa Pasangan', done: missionSummary.m2Interact },
-                { label: 'Main / Q&A', done: missionSummary.m3PlayOrQa },
-              ] as const).map((m) => (
-                <View
-                  key={m.label}
-                  style={[
-                    styles.missionPill,
-                    m.done && styles.missionPillDone,
-                  ]}>
-                  {m.done ? (
-                    <Check size={12} color={Pastel.matcha} />
-                  ) : (
-                    <Sparkles size={11} color={Pastel.textSoft} />
-                  )}
-                  <Text
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
-                    maxFontSizeMultiplier={1.1}
-                    style={[
-                      styles.missionPillText,
-                      m.done && styles.missionPillTextDone,
-                    ]}>
-                    {m.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </BouncyPressable>
+            <BouncyPressable
+              onPress={() => router.push('/notes')}
+              style={[styles.shortcutCard, SoftShadowSm]}>
+              <View style={[styles.shortcutIcon, { backgroundColor: Pastel.taroSoft }]}>
+                <StickyNote size={18} color={Pastel.taro} />
+              </View>
+              <View style={styles.shortcutTextCol}>
+                <Text style={styles.shortcutTitle} numberOfLines={1}>
+                  Love Notes
+                </Text>
+                <Text style={styles.shortcutSub} numberOfLines={1}>
+                  {loveNotes.length} catatan
+                </Text>
+              </View>
+            </BouncyPressable>
+          </View>
 
           {/* 4. Clean Borderless Location Bento Strip */}
           <BouncyPressable
@@ -1028,27 +984,30 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     flexShrink: 0,
   },
   circleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: Pastel.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  circleBtnPlay: {
+    backgroundColor: Pastel.honeySoft,
   },
   circleBtnLive: {
     backgroundColor: Pastel.matchaSoft,
   },
   liveDot: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
+    top: 5,
+    right: 5,
+    width: 7,
+    height: 7,
     borderRadius: 4,
     backgroundColor: Pastel.matcha,
   },
@@ -1056,13 +1015,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: -2,
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: Pastel.coral,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
   bellBadgeText: {
     fontFamily: BodyFontBold,
@@ -1073,10 +1032,10 @@ const styles = StyleSheet.create({
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: Pastel.bgElevated,
-    paddingHorizontal: 10,
-    height: 36,
+    paddingHorizontal: 9,
+    height: 34,
     borderRadius: 999,
     flexShrink: 0,
   },
@@ -1256,24 +1215,22 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: Pastel.textMuted,
   },
-  quickDockCard: {
-    backgroundColor: Pastel.bgElevated,
-    borderRadius: 22,
-    padding: 12,
-    gap: 10,
-  },
-  quickDockTopRow: {
+  streakStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  quickBadgeRow: {
+  streakLeftRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  streakMiniPill: {
+  streakPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -1282,14 +1239,14 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 999,
   },
-  streakMiniText: {
+  streakPillText: {
     fontFamily: BodyFontBold,
     fontSize: 12,
     lineHeight: 16,
     color: Pastel.peach,
     paddingRight: 2,
   },
-  coinsMiniPill: {
+  coinsPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -1298,145 +1255,75 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 999,
   },
-  coinsMiniText: {
+  coinsPillText: {
     fontFamily: BodyFontBold,
     fontSize: 12,
     lineHeight: 16,
     color: Pastel.honeyDark,
     paddingRight: 2,
   },
-  quickAbsenBtn: {
+  absenPillBtn: {
     backgroundColor: Pastel.coral,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
   },
-  quickAbsenText: {
+  absenPillText: {
     fontFamily: BodyFontBold,
     fontSize: 11.5,
     lineHeight: 16,
     color: Pastel.pureWhite,
     paddingRight: 2,
   },
-  quickMissionDonePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Pastel.matchaSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  playJumpPill: {
+    backgroundColor: Pastel.coralSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
   },
-  quickMissionDoneText: {
+  playJumpText: {
     fontFamily: BodyFontBold,
-    fontSize: 11.5,
+    fontSize: 12,
     lineHeight: 16,
-    color: Pastel.matcha,
+    color: Pastel.coralDark,
     paddingRight: 2,
   },
-  quickPlayGrid: {
+  shortcutGrid: {
     flexDirection: 'row',
-    gap: 7,
+    gap: 10,
   },
-  quickPlayPill: {
+  shortcutCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 9,
-    paddingHorizontal: 6,
-    borderRadius: 14,
+    gap: 10,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 22,
+    padding: 12,
   },
-  quickPlayEmoji: {
+  shortcutIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  shortcutTextCol: {
+    flex: 1,
+    gap: 1,
+  },
+  shortcutTitle: {
+    fontFamily: BodyFontBold,
     fontSize: 14,
     lineHeight: 19,
-  },
-  quickPlayLabel: {
-    fontFamily: BodyFontBold,
-    fontSize: 12,
-    lineHeight: 17,
-    paddingRight: 2,
-  },
-  qaSummaryCard: {
-    backgroundColor: Pastel.taroSoft,
-    borderRadius: 24,
-    padding: 16,
-    gap: 9,
-  },
-  qaSummaryTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  qaSummaryTagPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  qaSummaryEmoji: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  qaSummaryTagText: {
-    fontFamily: BodyFontBold,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: Pastel.taro,
-    paddingRight: 2,
-  },
-  qaSummaryActionText: {
-    fontFamily: BodyFontBold,
-    fontSize: 12,
-    lineHeight: 17,
-    color: Pastel.taro,
-    paddingRight: 2,
-  },
-  qaSummaryPrompt: {
-    fontFamily: BodyFontBold,
-    fontSize: 14.5,
-    lineHeight: 21,
     color: Pastel.text,
   },
-  streakHint: {
+  shortcutSub: {
     fontFamily: RoundedFont,
-    fontSize: 12,
-    lineHeight: 17,
-    color: Pastel.textMuted,
-  },
-  missionsRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  missionPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-    borderRadius: 999,
-  },
-  missionPillDone: {
-    backgroundColor: Pastel.matchaSoft,
-  },
-  missionPillText: {
-    fontFamily: BodyFontSemi,
     fontSize: 11.5,
     lineHeight: 16,
     color: Pastel.textMuted,
-    paddingRight: 2,
-  },
-  missionPillTextDone: {
-    fontFamily: BodyFontBold,
-    color: Pastel.matcha,
   },
   locationStrip: {
     flexDirection: 'row',

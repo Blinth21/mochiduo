@@ -1,11 +1,9 @@
 import {
-  Calendar,
   Camera,
   Gamepad2,
   Heart,
   MapPin,
   MessageCircle,
-  StickyNote,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Keyboard, Platform, StyleSheet, Text, View } from 'react-native';
@@ -37,8 +35,6 @@ const TAB_LABELS: Record<string, string> = {
   chat: 'Chat',
   memories: 'Album',
   lokasi: 'Lokasi',
-  dates: 'Kencan',
-  notes: 'Notes',
 };
 
 function renderTabIcon(name: string, color: string, focused: boolean) {
@@ -47,26 +43,22 @@ function renderTabIcon(name: string, color: string, focused: boolean) {
     case 'index':
       return (
         <Heart
-          size={18}
+          size={19}
           color={color}
           strokeWidth={strokeWidth}
           fill={focused ? color : 'none'}
         />
       );
     case 'play':
-      return <Gamepad2 size={18} color={color} strokeWidth={strokeWidth} />;
+      return <Gamepad2 size={19} color={color} strokeWidth={strokeWidth} />;
     case 'chat':
-      return <MessageCircle size={18} color={color} strokeWidth={strokeWidth} />;
+      return <MessageCircle size={19} color={color} strokeWidth={strokeWidth} />;
     case 'memories':
-      return <Camera size={18} color={color} strokeWidth={strokeWidth} />;
+      return <Camera size={19} color={color} strokeWidth={strokeWidth} />;
     case 'lokasi':
-      return <MapPin size={18} color={color} strokeWidth={strokeWidth} />;
-    case 'dates':
-      return <Calendar size={18} color={color} strokeWidth={strokeWidth} />;
-    case 'notes':
-      return <StickyNote size={18} color={color} strokeWidth={strokeWidth} />;
+      return <MapPin size={19} color={color} strokeWidth={strokeWidth} />;
     default:
-      return <Heart size={18} color={color} strokeWidth={strokeWidth} />;
+      return <Heart size={19} color={color} strokeWidth={strokeWidth} />;
   }
 }
 
@@ -145,7 +137,7 @@ export const PlayfulTabBar = React.memo(function PlayfulTabBar({
               <Text
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.78}
+                minimumFontScale={0.85}
                 maxFontSizeMultiplier={1.15}
                 style={[
                   styles.tabLabel,
@@ -180,21 +172,21 @@ const styles = StyleSheet.create({
   },
   dockInner: {
     width: '100%',
-    maxWidth: 540,
+    maxWidth: 500,
     flexDirection: 'row',
-    paddingHorizontal: 4,
+    paddingHorizontal: 10,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,
-    paddingHorizontal: 1,
+    paddingHorizontal: 2,
     gap: 3,
   },
   iconPill: {
-    width: 38,
-    height: 29,
+    width: 48,
+    height: 30,
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
@@ -206,7 +198,7 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -1,
-    right: 1,
+    right: 4,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
@@ -223,8 +215,8 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     width: '100%',
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 15,
     textAlign: 'center',
     paddingRight: 1,
   },

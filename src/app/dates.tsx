@@ -1,7 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
 import {
   Calendar,
   Check,
+  ChevronLeft,
   Dices,
   Plus,
   Sparkles,
@@ -113,6 +115,7 @@ const BucketRow = React.memo(function BucketRow({
 });
 
 export default function DatesScreen() {
+  const router = useRouter();
   const bucketList = useCoupleStore((s) => s.bucketList);
   const activePartnerId = useCoupleStore((s) => s.activePartnerId);
   const p1Name = useCoupleStore((s) => s.partners.p1.name);
@@ -227,6 +230,13 @@ export default function DatesScreen() {
       <View style={styles.container}>
         {/* Clean Airy Header */}
         <View style={styles.header}>
+          <BouncyPressable
+            onPress={() => router.push('/')}
+            style={[styles.backBtn, SoftShadowSm]}
+            accessibilityLabel="Kembali ke Home">
+            <ChevronLeft size={19} color={Pastel.text} />
+          </BouncyPressable>
+
           <View style={styles.headerCopy}>
             <Text style={styles.pageTitle} maxFontSizeMultiplier={1.2}>
               Kencan &amp; Bucket List
@@ -437,6 +447,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     marginBottom: 12,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Pastel.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   headerCopy: {
     flex: 1,

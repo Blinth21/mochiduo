@@ -34,7 +34,7 @@ const PREF_ITEMS: {
   { key: 'notes', label: 'Papan Love Notes', sub: 'Catatan baru & reaksi emoji', emoji: '💌' },
   { key: 'memories', label: 'Jurnal Kenangan', sub: 'Momen foto baru', emoji: '📸' },
   { key: 'dates', label: 'Kencan & Bucket List', sub: 'Rencana baru & misi selesai', emoji: '🎡' },
-  { key: 'play', label: 'MochiPlay, Q&A & Kado', sub: 'Jawaban Q&A, hadiah skin & mini-game', emoji: '🎮' },
+  { key: 'play', label: 'MochiPlay & Kado', sub: 'Hadiah skin & tantangan mini-game', emoji: '🎮' },
   { key: 'anniversary', label: 'Pengingat Anniversary', sub: 'Hari jadian & milestone 100 hari', emoji: '🎉' },
 ];
 
@@ -158,9 +158,9 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
                   onClose();
                   if (n.route) {
                     if (n.route.startsWith('/play')) {
-                      const match = n.route.match(/tab=(suit|ttt|qa|shop)/);
+                      const match = n.route.match(/tab=(suit|ttt|shop)/);
                       if (match) {
-                        setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'qa' | 'shop');
+                        setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'shop');
                       }
                       router.push('/play');
                     } else {

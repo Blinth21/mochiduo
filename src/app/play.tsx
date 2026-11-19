@@ -1,15 +1,11 @@
-import { useRouter } from 'expo-router';
 import {
   Check,
   Coins,
+  Eye,
   Flame,
   Gift,
-  Lock,
-  MessageCircle,
-  Pencil,
   RefreshCw,
-  Send,
-  Sparkles,
+  ShoppingBag,
   Trophy,
   X,
 } from 'lucide-react-native';
@@ -24,7 +20,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
@@ -35,13 +30,10 @@ import {
   SUIT_CHOICES,
   SUIT_PRESET_STAKES,
   computeCoupleStreak,
-  getDailyQuestion,
-  getDailyQuestionById,
   getMochiSkinSpec,
 } from '@/constants/mochiduoPlay';
 import {
   BodyFontBold,
-  BodyFontRegular,
   BodyFontSemi,
   Pastel,
   RoundedFont,
@@ -56,28 +48,42 @@ import {
   getUnlockedSkins,
   useCoupleStore,
 } from '@/store/useCoupleStore';
-import type { PartnerId, SuitChoice } from '@/types/couple';
-import { formatIndonesianDate, getLocalDateKey } from '@/utils/dateCalc';
+import type {
+  MochiAccessoryId,
+  MochiSkinId,
+  PartnerId,
+  SuitChoice,
+} from '@/types/couple';
+import { getLocalDateKey } from '@/utils/dateCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
 
-type PlaySectionTab = 'suit' | 'ttt' | 'qa' | 'shop';
+type PlaySectionTab = 'suit' | 'ttt' | 'shop';
 
 const SECTION_TABS: { id: PlaySectionTab; label: string; emoji: string }[] = [
   { id: 'suit', label: 'Suit', emoji: '✌️' },
   { id: 'ttt', label: 'XOXO', emoji: '🎮' },
-  { id: 'qa', label: 'Q&A', emoji: '❓' },
   { id: 'shop', label: 'Toko Skin', emoji: '🎨' },
 ];
 
-export default function MochiPlayScreen() {
-  const router = useRouter();
+const TTT_ROWS = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+] as const;
 
+export default function MochiPlayScreen() {
   const activeTab = useCoupleStore((s) => s.playSectionTab);
   const setActiveTab = useCoupleStore((s) => s.setPlaySectionTab);
 
-  const [qaDraft, setQaDraft] = useState('');
-  const [editingQa, setEditingQa] = useState(false);
   const [shopTarget, setShopTarget] = useState<'self' | 'gift'>('self');
+  const [previewSkinState, setPreviewSkinState] = useState<{
+    forId: PartnerId;
+    id: MochiSkinId;
+  } | null>(null);
+  const [previewAccState, setPreviewAccState] = useState<{
+    forId: PartnerId;
+    id: MochiAccessoryId;
+  } | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -103,8 +109,6 @@ export default function MochiPlayScreen() {
 
   const buyShopItem = useCoupleStore((s) => s.buyShopItem);
   const equipShopItem = useCoupleStore((s) => s.equipShopItem);
-  const submitDailyQa = useCoupleStore((s) => s.submitDailyQa);
-  const sendChatMessage = useCoupleStore((s) => s.sendChatMessage);
   const setSuitMode = useCoupleStore((s) => s.setSuitMode);
   const setSuitStake = useCoupleStore((s) => s.setSuitStake);
   const pickSuitChoice = useCoupleStore((s) => s.pickSuitChoice);
@@ -122,7 +126,6 @@ export default function MochiPlayScreen() {
 
   const myCoins = getProfileCoins(me);
   const todayKey = getLocalDateKey();
-  const todayQuestion = useMemo(() => getDailyQuestion(todayKey), [todayKey]);
   const streakInfo = useMemo(
     () => computeCoupleStreak(p1.activeDays, p2.activeDays, todayKey),
     [p1.activeDays, p2.activeDays, todayKey]
@@ -130,80 +133,74 @@ export default function MochiPlayScreen() {
 
   const isLiveConnected = syncConfig.enabled && syncStatus === 'connected';
 
-  // Q&A Today & Journal
-  const myTodayQa = me.qaResponses?.[todayKey];
-  const otherTodayQa = other.qaResponses?.[todayKey];
-
-  const pastQaDays = useMemo(() => {
-    const keys = new Set([
-      ...Object.keys(p1.qaResponses ?? {}),
-      ...Object.keys(p2.qaResponses ?? {}),
-    ]);
-    keys.delete(todayKey);
-    return Array.from(keys).sort().reverse().slice(0, 12);
-  }, [p1.qaResponses, p2.qaResponses, todayKey]);
-
-  const handleSubmitQa = () => {
-    const trimmed = qaDraft.trim();
-    if (!trimmed) return;
-    triggerSuccessHaptic();
-    const { coinsEarned } = submitDailyQa(
-      activePartnerId,
-      todayKey,
-      todayQuestion.id,
-      trimmed
-    );
-    setQaDraft('');
-    setEditingQa(false);
-    Keyboard.dismiss();
-    if (coinsEarned > 0) {
-      pushFeatureNotification({
-        category: 'play',
-        emoji: '🪙',
-        title: `Jawaban Q&A Tersimpan! (+${coinsEarned} Koin)`,
-        body: otherTodayQa
-          ? `Jawaban ${other.name} sudah terbuka di bawah!`
-          : `Nanti kalau ${other.name} menjawab, jawabannya otomatis terbuka.`,
-        route: '/play?tab=qa',
-        systemAlert: false,
-      });
-    }
-  };
-
-  const handleDiscussQaInChat = () => {
-    if (!myTodayQa || !otherTodayQa) return;
-    triggerSuccessHaptic();
-    sendChatMessage({
-      senderId: activePartnerId,
-      text: `${todayQuestion.emoji} Q&A Hari Ini: “${todayQuestion.prompt}”\n• ${me.name}: “${myTodayQa.answer}”\n• ${other.name}: “${otherTodayQa.answer}”\nYuk lanjut ngobrolin ini! 💕`,
-    });
-    router.push('/chat');
-  };
-
   // Shop handlers
   const recipientSkins = getUnlockedSkins(recipient);
   const recipientAccessories = getUnlockedAccessories(recipient);
   const recipientEquippedSkin = getProfileSkin(recipient);
   const recipientEquippedAcc = getProfileAccessory(recipient);
 
-  const handleShopPress = (
+  const previewSkinId =
+    previewSkinState &&
+    previewSkinState.forId === recipientId &&
+    !recipientSkins.includes(previewSkinState.id)
+      ? previewSkinState.id
+      : null;
+
+  const previewAccId =
+    previewAccState &&
+    previewAccState.forId === recipientId &&
+    !recipientAccessories.includes(previewAccState.id)
+      ? previewAccState.id
+      : null;
+
+  const setPreviewSkinId = (next: MochiSkinId | null) =>
+    setPreviewSkinState(next ? { forId: recipientId, id: next } : null);
+  const setPreviewAccId = (next: MochiAccessoryId | null) =>
+    setPreviewAccState(next ? { forId: recipientId, id: next } : null);
+
+  const handleShopCardPress = (kind: 'skin' | 'accessory', itemId: string) => {
+    const isOwned =
+      kind === 'skin'
+        ? recipientSkins.includes(itemId as MochiSkinId)
+        : recipientAccessories.includes(itemId as MochiAccessoryId);
+
+    triggerMediumHaptic();
+
+    if (isOwned) {
+      if (kind === 'skin') {
+        setPreviewSkinState(null);
+      } else {
+        setPreviewAccState(null);
+      }
+      equipShopItem(recipientId, kind, itemId);
+      return;
+    }
+
+    // Not owned: preview only without charging coins
+    if (kind === 'skin') {
+      const next = itemId as MochiSkinId;
+      setPreviewSkinState((prev) =>
+        prev?.forId === recipientId && prev.id === next
+          ? null
+          : { forId: recipientId, id: next }
+      );
+    } else {
+      const next = itemId as MochiAccessoryId;
+      setPreviewAccState((prev) =>
+        prev?.forId === recipientId && prev.id === next
+          ? null
+          : { forId: recipientId, id: next }
+      );
+    }
+  };
+
+  const handleConfirmBuy = (
     kind: 'skin' | 'accessory',
     itemId: string,
     itemName: string,
     emoji: string,
     price: number
   ) => {
-    const isOwned =
-      kind === 'skin'
-        ? recipientSkins.includes(itemId as any)
-        : recipientAccessories.includes(itemId as any);
-
-    if (isOwned) {
-      triggerMediumHaptic();
-      equipShopItem(recipientId, kind, itemId);
-      return;
-    }
-
     const res = buyShopItem({
       buyerId: activePartnerId,
       recipientId,
@@ -212,8 +209,17 @@ export default function MochiPlayScreen() {
     });
 
     if (!res.ok) {
-      Alert.alert('Koin Belum Cukup 🪙', res.reason ?? 'Kumpulkan koin lewat misi harian & game!');
+      Alert.alert(
+        'Koin Belum Cukup 🪙',
+        res.reason ?? 'Main game & absen harian dulu buat kumpulin koin!'
+      );
       return;
+    }
+
+    if (kind === 'skin') {
+      setPreviewSkinState(null);
+    } else {
+      setPreviewAccState(null);
     }
 
     triggerSuccessHaptic();
@@ -232,6 +238,16 @@ export default function MochiPlayScreen() {
       systemAlert: false,
     });
   };
+
+  const previewSkinSpec = useMemo(
+    () => (previewSkinId ? MOCHI_SKINS.find((s) => s.id === previewSkinId) ?? null : null),
+    [previewSkinId]
+  );
+  const previewAccSpec = useMemo(
+    () =>
+      previewAccId ? MOCHI_ACCESSORIES.find((a) => a.id === previewAccId) ?? null : null,
+    [previewAccId]
+  );
 
   // Skin emojis for Tic-Tac-Toe pieces
   const p1SkinSpec = getMochiSkinSpec(getProfileSkin(p1), p1.mochiColor);
@@ -478,18 +494,22 @@ export default function MochiPlayScreen() {
 
   const renderTttArena = () => {
     const turnOwner = tttGame.turn === 'p1' ? p1 : p2;
+    const isBoardEmpty = tttGame.board.every((c) => c === null);
     const isMyTurn =
       tttGame.mode === 'local' ||
-      (tttGame.mode === 'bot' && tttGame.turn === activePartnerId) ||
+      (tttGame.mode === 'bot' && (tttGame.turn === activePartnerId || isBoardEmpty)) ||
       (tttGame.mode === 'live' && tttGame.turn === activePartnerId);
+
+    const p1Label =
+      tttGame.mode === 'bot' && activePartnerId === 'p2' ? 'Mochi Bot' : p1.name;
+    const p2Label =
+      tttGame.mode === 'bot' && activePartnerId === 'p1' ? 'Mochi Bot' : p2.name;
 
     const winnerName =
       tttGame.winner === 'p1'
-        ? p1.name
+        ? p1Label
         : tttGame.winner === 'p2'
-          ? tttGame.mode === 'bot' && activePartnerId === 'p1'
-            ? 'Mochi Bot'
-            : p2.name
+          ? p2Label
           : null;
 
     return (
@@ -541,7 +561,7 @@ export default function MochiPlayScreen() {
             <View style={[styles.scoreBox, { backgroundColor: p1SkinSpec.pillBg }]}>
               <Text style={styles.scoreEmoji}>{p1SkinSpec.emoji}</Text>
               <Text style={styles.scoreName} numberOfLines={1}>
-                {p1.name}
+                {p1Label}
               </Text>
               <Text style={[styles.scoreNum, { color: p1SkinSpec.accent }]}>
                 {tttGame.scores.p1}
@@ -556,9 +576,11 @@ export default function MochiPlayScreen() {
               ) : (
                 <Text style={styles.turnCenterText} numberOfLines={2}>
                   Giliran:{'\n'}
-                  {tttGame.mode === 'bot' && tttGame.turn !== activePartnerId
+                  {tttGame.mode === 'bot' && tttGame.turn !== activePartnerId && !isBoardEmpty
                     ? 'Mochi Bot...'
-                    : turnOwner.name}
+                    : tttGame.mode === 'bot' && isBoardEmpty
+                      ? me.name
+                      : turnOwner.name}
                 </Text>
               )}
             </View>
@@ -566,7 +588,7 @@ export default function MochiPlayScreen() {
             <View style={[styles.scoreBox, { backgroundColor: p2SkinSpec.pillBg }]}>
               <Text style={styles.scoreEmoji}>{p2SkinSpec.emoji}</Text>
               <Text style={styles.scoreName} numberOfLines={1}>
-                {tttGame.mode === 'bot' && activePartnerId === 'p1' ? 'Mochi Bot' : p2.name}
+                {p2Label}
               </Text>
               <Text style={[styles.scoreNum, { color: p2SkinSpec.accent }]}>
                 {tttGame.scores.p2}
@@ -574,48 +596,55 @@ export default function MochiPlayScreen() {
             </View>
           </View>
 
-          {/* 3x3 Board */}
-          <View style={styles.tttGrid}>
-            {tttGame.board.map((cell, idx) => {
-              const isWinCell = tttGame.winLine?.includes(idx);
-              const cellBg = isWinCell
-                ? cell === 'p1'
-                  ? Pastel.coralSoft
-                  : Pastel.matchaSoft
-                : cell
-                  ? Pastel.bgElevated
-                  : Pastel.bg;
+          {/* Explicit 3x3 Rows Board (crash/collapse-free on Android Yoga) */}
+          <View style={styles.tttBoardWrap}>
+            {TTT_ROWS.map((row, rowIdx) => (
+              <View key={rowIdx} style={styles.tttRow}>
+                {row.map((idx) => {
+                  const cell = tttGame.board[idx];
+                  const isWinCell = tttGame.winLine?.includes(idx);
+                  const cellBg = isWinCell
+                    ? cell === 'p1'
+                      ? Pastel.coralSoft
+                      : Pastel.matchaSoft
+                    : cell
+                      ? Pastel.bgElevated
+                      : Pastel.bgMuted;
 
-              return (
-                <BouncyPressable
-                  key={idx}
-                  disabled={Boolean(cell || tttGame.winner || !isMyTurn)}
-                  onPress={() => {
-                    triggerMediumHaptic();
-                    makeTttMove(idx);
-                  }}
-                  style={[
-                    styles.tttCell,
-                    SoftShadowSm,
-                    { backgroundColor: cellBg },
-                  ]}>
-                  {cell ? (
-                    <View
+                  return (
+                    <BouncyPressable
+                      key={idx}
+                      disabled={Boolean(cell || tttGame.winner || !isMyTurn)}
+                      onPress={() => {
+                        triggerMediumHaptic();
+                        makeTttMove(idx);
+                      }}
                       style={[
-                        styles.tttToken,
-                        {
-                          backgroundColor:
-                            cell === 'p1' ? p1SkinSpec.bottom : p2SkinSpec.bottom,
-                        },
+                        styles.tttCell,
+                        cell ? SoftShadowSm : undefined,
+                        { backgroundColor: cellBg },
                       ]}>
-                      <Text style={styles.tttTokenEmoji}>
-                        {cell === 'p1' ? p1SkinSpec.emoji : p2SkinSpec.emoji}
-                      </Text>
-                    </View>
-                  ) : null}
-                </BouncyPressable>
-              );
-            })}
+                      {cell ? (
+                        <View
+                          style={[
+                            styles.tttToken,
+                            {
+                              backgroundColor:
+                                cell === 'p1' ? p1SkinSpec.bottom : p2SkinSpec.bottom,
+                            },
+                          ]}>
+                          <Text style={styles.tttTokenEmoji}>
+                            {cell === 'p1' ? p1SkinSpec.emoji : p2SkinSpec.emoji}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.tttEmptyDot} />
+                      )}
+                    </BouncyPressable>
+                  );
+                })}
+              </View>
+            ))}
           </View>
 
           {tttGame.winner ? (
@@ -634,6 +663,17 @@ export default function MochiPlayScreen() {
       </View>
     );
   };
+
+  const p1DisplayedSkin =
+    recipientId === 'p1' && previewSkinId ? previewSkinId : getProfileSkin(p1);
+  const p1DisplayedAcc =
+    recipientId === 'p1' && previewAccId ? previewAccId : getProfileAccessory(p1);
+  const p2DisplayedSkin =
+    recipientId === 'p2' && previewSkinId ? previewSkinId : getProfileSkin(p2);
+  const p2DisplayedAcc =
+    recipientId === 'p2' && previewAccId ? previewAccId : getProfileAccessory(p2);
+
+  const hasPreview = Boolean(previewSkinSpec || previewAccSpec);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -666,7 +706,7 @@ export default function MochiPlayScreen() {
             </View>
           </View>
 
-          {/* 4-Pill Segmented Navigation */}
+          {/* 3-Pill Segmented Navigation */}
           <View style={[styles.segmentBar, SoftShadowSm]}>
             {SECTION_TABS.map((tab) => {
               const selected = activeTab === tab.id;
@@ -698,190 +738,9 @@ export default function MochiPlayScreen() {
             })}
           </View>
 
-          {/* TAB 1: DAILY BLIND Q&A */}
-          {activeTab === 'qa' ? (
-            <Animated.View
-              key="panel-qa"
-              entering={FadeIn.duration(220)}
-              style={styles.sectionStack}>
-              <View style={[styles.qaHeroCard, SoftShadow]}>
-                <View style={styles.qaTopRow}>
-                  <View style={styles.qaCatPill}>
-                    <Text style={styles.qaCatText} maxFontSizeMultiplier={1.15}>
-                      {todayQuestion.emoji} Obrolan Hari Ini · {todayQuestion.category}
-                    </Text>
-                  </View>
-                  <Text style={styles.qaDateText}>
-                    {formatIndonesianDate(todayKey)}
-                  </Text>
-                </View>
-
-                <Text style={styles.qaPrompt}>{todayQuestion.prompt}</Text>
-
-                {/* My answer */}
-                <View style={styles.qaAnswerBox}>
-                  <View style={styles.qaSideHeader}>
-                    <Text style={styles.qaSideLabel}>
-                      Jawaban {me.name} (Kamu)
-                    </Text>
-                    {myTodayQa && !editingQa ? (
-                      <BouncyPressable
-                        onPress={() => {
-                          triggerMediumHaptic();
-                          setQaDraft(myTodayQa.answer);
-                          setEditingQa(true);
-                        }}
-                        style={styles.qaEditPill}>
-                        <Pencil size={11} color={Pastel.coralDark} />
-                        <Text style={styles.qaEditText} maxFontSizeMultiplier={1.15}>
-                          Edit
-                        </Text>
-                      </BouncyPressable>
-                    ) : myTodayQa && editingQa ? (
-                      <BouncyPressable
-                        onPress={() => {
-                          setEditingQa(false);
-                          setQaDraft('');
-                          Keyboard.dismiss();
-                        }}
-                        style={styles.qaCancelPill}>
-                        <X size={11} color={Pastel.textMuted} />
-                        <Text style={styles.qaCancelText} maxFontSizeMultiplier={1.15}>
-                          Batal
-                        </Text>
-                      </BouncyPressable>
-                    ) : null}
-                  </View>
-
-                  {myTodayQa && !editingQa ? (
-                    <Animated.View
-                      entering={FadeInDown.duration(220)}
-                      style={styles.qaSavedBubble}>
-                      <Text style={styles.qaSavedText}>“{myTodayQa.answer}”</Text>
-                      <Text style={styles.qaSavedBadge}>✓ Tersimpan lembut untuk hari ini</Text>
-                    </Animated.View>
-                  ) : (
-                    <View style={styles.qaInputRow}>
-                      <TextInput
-                        value={qaDraft}
-                        onChangeText={setQaDraft}
-                        placeholder="Ceritain jawaban jujurmu dengan santai..."
-                        placeholderTextColor={Pastel.textSoft}
-                        style={styles.qaTextInput}
-                        multiline
-                        maxLength={220}
-                      />
-                      <BouncyPressable
-                        onPress={handleSubmitQa}
-                        style={[
-                          styles.qaSendBtn,
-                          !qaDraft.trim() && { opacity: 0.45 },
-                        ]}>
-                        <Send size={16} color={Pastel.pureWhite} />
-                      </BouncyPressable>
-                    </View>
-                  )}
-                </View>
-
-                {/* Partner answer (Silky Soft-Lock until both answer!) */}
-                <View style={styles.qaAnswerBox}>
-                  <Text style={styles.qaSideLabel}>Jawaban {other.name}</Text>
-
-                  {!otherTodayQa ? (
-                    <View style={styles.qaSoftLockCard}>
-                      <View style={styles.qaSkeletonBars}>
-                        <View style={styles.qaSkeletonBarLong} />
-                        <View style={styles.qaSkeletonBarShort} />
-                      </View>
-                      <View style={styles.qaSoftLockPill}>
-                        <Sparkles size={13} color={Pastel.textMuted} />
-                        <Text style={styles.qaSoftLockText}>
-                          Menunggu {other.name} menuliskan ceritanya hari ini ✨
-                        </Text>
-                      </View>
-                    </View>
-                  ) : !myTodayQa ? (
-                    <View style={[styles.qaSoftLockCard, { backgroundColor: Pastel.taroSoft }]}>
-                      <View style={styles.qaSkeletonBars}>
-                        <View style={[styles.qaSkeletonBarLong, { backgroundColor: 'rgba(255,255,255,0.68)' }]} />
-                        <View style={[styles.qaSkeletonBarShort, { backgroundColor: 'rgba(255,255,255,0.52)' }]} />
-                      </View>
-                      <View style={[styles.qaSoftLockPill, { backgroundColor: 'rgba(255,255,255,0.78)' }]}>
-                        <Lock size={13} color={Pastel.taro} />
-                        <Text style={[styles.qaSoftLockText, { color: Pastel.taro }]}>
-                          Terkunci lembut sampai kamu ikut menjawab 💭
-                        </Text>
-                      </View>
-                    </View>
-                  ) : (
-                    <Animated.View
-                      entering={FadeInDown.duration(260)}
-                      style={[styles.qaSavedBubble, { backgroundColor: Pastel.matchaSoft }]}>
-                      <Text style={styles.qaSavedText}>“{otherTodayQa.answer}”</Text>
-                      <Text style={[styles.qaSavedBadge, { color: Pastel.matcha }]}>
-                        ✨ Terbuka Berdua
-                      </Text>
-                    </Animated.View>
-                  )}
-                </View>
-
-                {myTodayQa && otherTodayQa ? (
-                  <Animated.View entering={FadeInDown.duration(260)}>
-                    <BouncyPressable
-                      onPress={handleDiscussQaInChat}
-                      style={styles.qaChatBtn}>
-                      <MessageCircle size={16} color={Pastel.pureWhite} />
-                      <Text style={styles.qaChatBtnText} maxFontSizeMultiplier={1.15}>
-                        Lanjut Bahas di Chat 💬
-                      </Text>
-                    </BouncyPressable>
-                  </Animated.View>
-                ) : null}
-              </View>
-
-              {/* Q&A Past History */}
-              {pastQaDays.length > 0 ? (
-                <View style={[styles.bentoCard, SoftShadow]}>
-                  <Text style={styles.cardTitle}>Jurnal Q&A Sebelumnya</Text>
-                  <View style={{ gap: 10 }}>
-                    {pastQaDays.map((dayKey) => {
-                      const q1 = p1.qaResponses?.[dayKey];
-                      const q2 = p2.qaResponses?.[dayKey];
-                      const qId = q1?.questionId ?? q2?.questionId ?? '';
-                      const qObj = getDailyQuestionById(qId, dayKey);
-                      return (
-                        <View key={dayKey} style={styles.historyQaCard}>
-                          <Text style={styles.historyQaDate}>
-                            {qObj.emoji} {formatIndonesianDate(dayKey)} · {qObj.category}
-                          </Text>
-                          <Text style={styles.historyQaPrompt}>{qObj.prompt}</Text>
-                          {q1 ? (
-                            <Text style={styles.historyQaAns}>
-                              <Text style={{ fontFamily: BodyFontBold }}>{p1.name}: </Text>
-                              {q1.answer}
-                            </Text>
-                          ) : null}
-                          {q2 ? (
-                            <Text style={styles.historyQaAns}>
-                              <Text style={{ fontFamily: BodyFontBold }}>{p2.name}: </Text>
-                              {q2.answer}
-                            </Text>
-                          ) : null}
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              ) : null}
-            </Animated.View>
-          ) : null}
-
-          {/* TAB 2: MOCHI SKIN & ACCESSORY SHOP */}
+          {/* TAB 1: MOCHI SKIN & ACCESSORY SHOP */}
           {activeTab === 'shop' ? (
-            <Animated.View
-              key="panel-shop"
-              entering={FadeIn.duration(220)}
-              style={styles.sectionStack}>
+            <View style={styles.sectionStack}>
               <View style={[styles.bentoCard, SoftShadow]}>
                 <View style={styles.shopTargetRow}>
                   <BouncyPressable
@@ -927,11 +786,17 @@ export default function MochiPlayScreen() {
                       styles.wardrobeSlot,
                       recipientId === 'p1' && styles.wardrobeSlotFocused,
                     ]}>
+                    {recipientId === 'p1' && hasPreview ? (
+                      <View style={styles.previewSlotBadge}>
+                        <Eye size={10} color={Pastel.taro} />
+                        <Text style={styles.previewSlotBadgeText}>Preview</Text>
+                      </View>
+                    ) : null}
                     <MochiMascot
                       bodyColor={p1.mochiColor}
                       auraColor={p1.auraColor}
-                      skinId={getProfileSkin(p1)}
-                      accessoryId={getProfileAccessory(p1)}
+                      skinId={p1DisplayedSkin}
+                      accessoryId={p1DisplayedAcc}
                       mood={p1.mood}
                       size={74}
                     />
@@ -945,11 +810,17 @@ export default function MochiPlayScreen() {
                       styles.wardrobeSlot,
                       recipientId === 'p2' && styles.wardrobeSlotFocused,
                     ]}>
+                    {recipientId === 'p2' && hasPreview ? (
+                      <View style={styles.previewSlotBadge}>
+                        <Eye size={10} color={Pastel.taro} />
+                        <Text style={styles.previewSlotBadgeText}>Preview</Text>
+                      </View>
+                    ) : null}
                     <MochiMascot
                       bodyColor={p2.mochiColor}
                       auraColor={p2.auraColor}
-                      skinId={getProfileSkin(p2)}
-                      accessoryId={getProfileAccessory(p2)}
+                      skinId={p2DisplayedSkin}
+                      accessoryId={p2DisplayedAcc}
                       mood={p2.mood}
                       size={74}
                       delayMs={400}
@@ -959,6 +830,74 @@ export default function MochiPlayScreen() {
                     </Text>
                   </View>
                 </View>
+
+                {hasPreview ? (
+                  <View style={styles.previewBar}>
+                    <View style={styles.previewBarTop}>
+                      <Text style={styles.previewBarTitle} numberOfLines={2}>
+                        Preview:{' '}
+                        {[
+                          previewSkinSpec ? `${previewSkinSpec.emoji} ${previewSkinSpec.name}` : null,
+                          previewAccSpec ? `${previewAccSpec.emoji} ${previewAccSpec.name}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' + ')}
+                      </Text>
+                      <BouncyPressable
+                        onPress={() => {
+                          setPreviewSkinId(null);
+                          setPreviewAccId(null);
+                        }}
+                        style={styles.previewResetBtn}>
+                        <X size={13} color={Pastel.textMuted} />
+                      </BouncyPressable>
+                    </View>
+
+                    <View style={styles.previewBuyRow}>
+                      {previewSkinSpec ? (
+                        <BouncyPressable
+                          onPress={() =>
+                            handleConfirmBuy(
+                              'skin',
+                              previewSkinSpec.id,
+                              previewSkinSpec.name,
+                              previewSkinSpec.emoji,
+                              previewSkinSpec.price
+                            )
+                          }
+                          style={styles.previewBuyChip}>
+                          <ShoppingBag size={13} color={Pastel.pureWhite} />
+                          <Text style={styles.previewBuyChipText} maxFontSizeMultiplier={1.1}>
+                            Beli {previewSkinSpec.emoji} · 🪙 {previewSkinSpec.price}
+                          </Text>
+                        </BouncyPressable>
+                      ) : null}
+
+                      {previewAccSpec ? (
+                        <BouncyPressable
+                          onPress={() =>
+                            handleConfirmBuy(
+                              'accessory',
+                              previewAccSpec.id,
+                              previewAccSpec.name,
+                              previewAccSpec.emoji,
+                              previewAccSpec.price
+                            )
+                          }
+                          style={styles.previewBuyChip}>
+                          <ShoppingBag size={13} color={Pastel.pureWhite} />
+                          <Text style={styles.previewBuyChipText} maxFontSizeMultiplier={1.1}>
+                            Beli {previewAccSpec.emoji} · 🪙 {previewAccSpec.price}
+                          </Text>
+                        </BouncyPressable>
+                      ) : null}
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.shopHintText}>
+                    Tap skin atau aksesori di bawah buat coba preview dulu sebelum beli!
+                  </Text>
+                )}
               </View>
 
               {/* Skins Grid */}
@@ -967,48 +906,76 @@ export default function MochiPlayScreen() {
                 <View style={styles.catalogGrid}>
                   {MOCHI_SKINS.map((skin) => {
                     const owned = recipientSkins.includes(skin.id);
-                    const equipped = recipientEquippedSkin === skin.id;
+                    const equipped = recipientEquippedSkin === skin.id && !previewSkinId;
+                    const previewing = previewSkinId === skin.id && !owned;
                     return (
-                      <BouncyPressable
+                      <View
                         key={skin.id}
-                        onPress={() =>
-                          handleShopPress('skin', skin.id, skin.name, skin.emoji, skin.price)
-                        }
                         style={[
                           styles.catalogItem,
                           equipped && { backgroundColor: skin.pillBg },
+                          previewing && styles.catalogItemPreview,
                         ]}>
-                        <View
-                          style={[
-                            styles.swatchCircle,
-                            { backgroundColor: skin.bottom },
-                          ]}>
-                          <Text style={styles.swatchEmoji}>{skin.emoji}</Text>
-                        </View>
-                        <Text style={styles.catalogName} numberOfLines={1}>
-                          {skin.name}
-                        </Text>
-                        <View
-                          style={[
-                            styles.priceBadge,
-                            equipped
-                              ? styles.priceBadgeEquipped
-                              : owned
-                                ? styles.priceBadgeOwned
-                                : styles.priceBadgeBuy,
-                          ]}>
-                          {equipped ? (
-                            <>
-                              <Check size={11} color={Pastel.pureWhite} />
-                              <Text style={styles.priceBadgeTextWhite}>Dipakai</Text>
-                            </>
-                          ) : owned ? (
-                            <Text style={styles.priceBadgeTextOwned}>Milik {recipient.nickname}</Text>
-                          ) : (
-                            <Text style={styles.priceBadgeTextBuy}>🪙 {skin.price}</Text>
-                          )}
-                        </View>
-                      </BouncyPressable>
+                        <BouncyPressable
+                          onPress={() => handleShopCardPress('skin', skin.id)}
+                          style={styles.catalogItemTapArea}>
+                          <View
+                            style={[
+                              styles.swatchCircle,
+                              { backgroundColor: skin.bottom },
+                            ]}>
+                            <Text style={styles.swatchEmoji}>{skin.emoji}</Text>
+                          </View>
+                          <Text style={styles.catalogName} numberOfLines={1}>
+                            {skin.name}
+                          </Text>
+                          <View
+                            style={[
+                              styles.priceBadge,
+                              equipped
+                                ? styles.priceBadgeEquipped
+                                : previewing
+                                  ? styles.priceBadgePreview
+                                  : owned
+                                    ? styles.priceBadgeOwned
+                                    : styles.priceBadgeBuy,
+                            ]}>
+                            {equipped ? (
+                              <>
+                                <Check size={11} color={Pastel.pureWhite} />
+                                <Text style={styles.priceBadgeTextWhite}>Dipakai</Text>
+                              </>
+                            ) : previewing ? (
+                              <>
+                                <Eye size={11} color={Pastel.taro} />
+                                <Text style={styles.priceBadgeTextPreview}>Preview</Text>
+                              </>
+                            ) : owned ? (
+                              <Text style={styles.priceBadgeTextOwned}>Milik {recipient.nickname}</Text>
+                            ) : (
+                              <Text style={styles.priceBadgeTextBuy}>🪙 {skin.price}</Text>
+                            )}
+                          </View>
+                        </BouncyPressable>
+
+                        {previewing ? (
+                          <BouncyPressable
+                            onPress={() =>
+                              handleConfirmBuy(
+                                'skin',
+                                skin.id,
+                                skin.name,
+                                skin.emoji,
+                                skin.price
+                              )
+                            }
+                            style={styles.cardBuyBtn}>
+                            <Text style={styles.cardBuyBtnText} maxFontSizeMultiplier={1.1}>
+                              Beli 🪙 {skin.price}
+                            </Text>
+                          </BouncyPressable>
+                        ) : null}
+                      </View>
                     );
                   })}
                 </View>
@@ -1020,65 +987,90 @@ export default function MochiPlayScreen() {
                 <View style={{ gap: 10 }}>
                   {MOCHI_ACCESSORIES.map((acc) => {
                     const owned = recipientAccessories.includes(acc.id);
-                    const equipped = recipientEquippedAcc === acc.id;
+                    const equipped = recipientEquippedAcc === acc.id && !previewAccId;
+                    const previewing = previewAccId === acc.id && !owned;
                     return (
-                      <BouncyPressable
+                      <View
                         key={acc.id}
-                        onPress={() =>
-                          handleShopPress('accessory', acc.id, acc.name, acc.emoji, acc.price)
-                        }
                         style={[
-                          styles.accRow,
+                          styles.accCardWrap,
                           equipped && { backgroundColor: Pastel.coralSoft },
+                          previewing && styles.accCardWrapPreview,
                         ]}>
-                        <View style={styles.accEmojiCircle}>
-                          <Text style={styles.accEmoji}>{acc.emoji}</Text>
-                        </View>
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={styles.accName}>{acc.name}</Text>
-                          <Text style={styles.accDesc}>{acc.desc}</Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.priceBadge,
-                            equipped
-                              ? styles.priceBadgeEquipped
-                              : owned
-                                ? styles.priceBadgeOwned
-                                : styles.priceBadgeBuy,
-                          ]}>
-                          {equipped ? (
-                            <>
-                              <Check size={11} color={Pastel.pureWhite} />
-                              <Text style={styles.priceBadgeTextWhite}>Dipakai</Text>
-                            </>
-                          ) : owned ? (
-                            <Text style={styles.priceBadgeTextOwned}>Pasang</Text>
-                          ) : (
-                            <Text style={styles.priceBadgeTextBuy}>🪙 {acc.price}</Text>
-                          )}
-                        </View>
-                      </BouncyPressable>
+                        <BouncyPressable
+                          onPress={() => handleShopCardPress('accessory', acc.id)}
+                          style={styles.accRow}>
+                          <View style={styles.accEmojiCircle}>
+                            <Text style={styles.accEmoji}>{acc.emoji}</Text>
+                          </View>
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <Text style={styles.accName}>{acc.name}</Text>
+                            <Text style={styles.accDesc}>{acc.desc}</Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.priceBadge,
+                              equipped
+                                ? styles.priceBadgeEquipped
+                                : previewing
+                                  ? styles.priceBadgePreview
+                                  : owned
+                                    ? styles.priceBadgeOwned
+                                    : styles.priceBadgeBuy,
+                            ]}>
+                            {equipped ? (
+                              <>
+                                <Check size={11} color={Pastel.pureWhite} />
+                                <Text style={styles.priceBadgeTextWhite}>Dipakai</Text>
+                              </>
+                            ) : previewing ? (
+                              <>
+                                <Eye size={11} color={Pastel.taro} />
+                                <Text style={styles.priceBadgeTextPreview}>Preview</Text>
+                              </>
+                            ) : owned ? (
+                              <Text style={styles.priceBadgeTextOwned}>Pasang</Text>
+                            ) : (
+                              <Text style={styles.priceBadgeTextBuy}>🪙 {acc.price}</Text>
+                            )}
+                          </View>
+                        </BouncyPressable>
+
+                        {previewing ? (
+                          <View style={styles.accPreviewBar}>
+                            <Text style={styles.accPreviewHint}>
+                              Cek tampilan Mochi di atas ↑
+                            </Text>
+                            <BouncyPressable
+                              onPress={() =>
+                                handleConfirmBuy(
+                                  'accessory',
+                                  acc.id,
+                                  acc.name,
+                                  acc.emoji,
+                                  acc.price
+                                )
+                              }
+                              style={styles.cardBuyBtnCompact}>
+                              <Text style={styles.cardBuyBtnText} maxFontSizeMultiplier={1.1}>
+                                Beli 🪙 {acc.price}
+                              </Text>
+                            </BouncyPressable>
+                          </View>
+                        ) : null}
+                      </View>
                     );
                   })}
                 </View>
               </View>
-            </Animated.View>
+            </View>
           ) : null}
 
-          {/* TAB 3: SUIT MOCHI */}
-          {activeTab === 'suit' ? (
-            <Animated.View key="panel-suit" entering={FadeIn.duration(220)}>
-              {renderSuitArena()}
-            </Animated.View>
-          ) : null}
+          {/* TAB 2: SUIT MOCHI */}
+          {activeTab === 'suit' ? renderSuitArena() : null}
 
-          {/* TAB 4: TIC-TAC-TOE MOCHI */}
-          {activeTab === 'ttt' ? (
-            <Animated.View key="panel-ttt" entering={FadeIn.duration(220)}>
-              {renderTttArena()}
-            </Animated.View>
-          ) : null}
+          {/* TAB 3: TIC-TAC-TOE MOCHI */}
+          {activeTab === 'ttt' ? renderTttArena() : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1198,215 +1190,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  qaHeroCard: {
-    backgroundColor: Pastel.bgElevated,
-    borderRadius: 28,
-    padding: 20,
-    gap: 15,
-  },
-  qaTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  qaCatPill: {
-    backgroundColor: Pastel.taroSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  qaCatText: {
-    fontFamily: BodyFontBold,
-    fontSize: 12,
-    lineHeight: 17,
-    color: Pastel.taro,
-    paddingRight: 2,
-  },
-  qaDateText: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    lineHeight: 17,
-    color: Pastel.textSoft,
-  },
-  qaPrompt: {
-    fontFamily: BodyFontBold,
-    fontSize: 18,
-    lineHeight: 26,
-    color: Pastel.text,
-  },
-  qaAnswerBox: {
-    gap: 7,
-  },
-  qaSideHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  qaSideLabel: {
-    fontFamily: BodyFontSemi,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: Pastel.textMuted,
-  },
-  qaEditPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Pastel.coralSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  qaEditText: {
-    fontFamily: BodyFontBold,
-    fontSize: 11.5,
-    lineHeight: 15,
-    color: Pastel.coralDark,
-    paddingRight: 2,
-  },
-  qaCancelPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Pastel.bgMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  qaCancelText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 11.5,
-    lineHeight: 15,
-    color: Pastel.textMuted,
-    paddingRight: 2,
-  },
-  qaInputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  qaTextInput: {
-    flex: 1,
-    backgroundColor: Pastel.bgMuted,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontFamily: BodyFontRegular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: Pastel.text,
-    minHeight: 50,
-    maxHeight: 120,
-  },
-  qaSendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Pastel.coral,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qaSavedBubble: {
-    backgroundColor: Pastel.coralSoft,
-    borderRadius: 20,
-    padding: 15,
-    gap: 6,
-  },
-  qaSavedText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 14.5,
-    lineHeight: 22,
-    color: Pastel.text,
-  },
-  qaSavedBadge: {
-    fontFamily: BodyFontBold,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: Pastel.coralDark,
-  },
-  qaSoftLockCard: {
-    backgroundColor: Pastel.bg,
-    borderRadius: 20,
-    padding: 15,
-    gap: 11,
-  },
-  qaSkeletonBars: {
-    gap: 7,
-  },
-  qaSkeletonBarLong: {
-    height: 11,
-    width: '84%',
-    borderRadius: 6,
-    backgroundColor: Pastel.bgMuted,
-  },
-  qaSkeletonBarShort: {
-    height: 11,
-    width: '56%',
-    borderRadius: 6,
-    backgroundColor: Pastel.bgMuted,
-  },
-  qaSoftLockPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    backgroundColor: Pastel.bgElevated,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  qaSoftLockText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 12,
-    lineHeight: 17,
-    color: Pastel.textMuted,
-    paddingRight: 2,
-  },
-  qaChatBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Pastel.coral,
-    borderRadius: 999,
-    paddingVertical: 13,
-    paddingHorizontal: 18,
-  },
-  qaChatBtnText: {
-    fontFamily: BodyFontBold,
-    fontSize: 13.5,
-    lineHeight: 19,
-    color: Pastel.pureWhite,
-    paddingRight: 2,
-  },
-  historyQaCard: {
-    backgroundColor: Pastel.bg,
-    borderRadius: 16,
-    padding: 13,
-    gap: 4,
-  },
-  historyQaDate: {
-    fontFamily: BodyFontBold,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: Pastel.coralDark,
-  },
-  historyQaPrompt: {
-    fontFamily: BodyFontSemi,
-    fontSize: 13.5,
-    lineHeight: 19,
-    color: Pastel.text,
-    marginBottom: 4,
-  },
-  historyQaAns: {
-    fontFamily: BodyFontRegular,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: Pastel.textMuted,
-  },
   shopTargetRow: {
     flexDirection: 'row',
     gap: 8,
@@ -1450,15 +1233,91 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
     gap: 6,
+    position: 'relative',
   },
   wardrobeSlotFocused: {
     backgroundColor: Pastel.coralSoft,
+  },
+  previewSlotBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Pastel.taroSoft,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 999,
+    zIndex: 2,
+  },
+  previewSlotBadgeText: {
+    fontFamily: BodyFontBold,
+    fontSize: 9.5,
+    lineHeight: 13,
+    color: Pastel.taro,
+    paddingRight: 1,
   },
   wardrobeName: {
     fontFamily: BodyFontBold,
     fontSize: 13,
     lineHeight: 18,
     color: Pastel.text,
+  },
+  shopHintText: {
+    fontFamily: RoundedFont,
+    fontSize: 12,
+    lineHeight: 17,
+    color: Pastel.textMuted,
+    textAlign: 'center',
+  },
+  previewBar: {
+    backgroundColor: Pastel.taroSoft,
+    borderRadius: 18,
+    padding: 12,
+    gap: 10,
+  },
+  previewBarTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  previewBarTitle: {
+    flex: 1,
+    fontFamily: BodyFontBold,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: Pastel.taro,
+  },
+  previewResetBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Pastel.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewBuyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  previewBuyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Pastel.coral,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  previewBuyChipText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.pureWhite,
+    paddingRight: 2,
   },
   catalogGrid: {
     flexDirection: 'row',
@@ -1470,6 +1329,14 @@ const styles = StyleSheet.create({
     backgroundColor: Pastel.bg,
     borderRadius: 20,
     padding: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  catalogItemPreview: {
+    backgroundColor: Pastel.taroSoft,
+  },
+  catalogItemTapArea: {
+    width: '100%',
     alignItems: 'center',
     gap: 7,
   },
@@ -1500,6 +1367,9 @@ const styles = StyleSheet.create({
   priceBadgeEquipped: {
     backgroundColor: Pastel.matcha,
   },
+  priceBadgePreview: {
+    backgroundColor: Pastel.bgElevated,
+  },
   priceBadgeOwned: {
     backgroundColor: Pastel.bgMuted,
   },
@@ -1511,6 +1381,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     color: Pastel.pureWhite,
+    paddingRight: 2,
+  },
+  priceBadgeTextPreview: {
+    fontFamily: BodyFontBold,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Pastel.taro,
     paddingRight: 2,
   },
   priceBadgeTextOwned: {
@@ -1527,13 +1404,58 @@ const styles = StyleSheet.create({
     color: Pastel.honeyDark,
     paddingRight: 2,
   },
+  cardBuyBtn: {
+    width: '100%',
+    backgroundColor: Pastel.coral,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  cardBuyBtnCompact: {
+    backgroundColor: Pastel.coral,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  cardBuyBtnText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.pureWhite,
+    paddingRight: 2,
+  },
+  accCardWrap: {
+    backgroundColor: Pastel.bg,
+    borderRadius: 18,
+    padding: 12,
+    gap: 10,
+  },
+  accCardWrapPreview: {
+    backgroundColor: Pastel.taroSoft,
+  },
   accRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    backgroundColor: Pastel.bg,
-    borderRadius: 18,
-    padding: 12,
+  },
+  accPreviewBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 14,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
+  accPreviewHint: {
+    flex: 1,
+    fontFamily: RoundedFont,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.textMuted,
   },
   accEmojiCircle: {
     width: 42,
@@ -1823,19 +1745,27 @@ const styles = StyleSheet.create({
     color: Pastel.text,
     textAlign: 'center',
   },
-  tttGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  tttBoardWrap: {
+    width: '100%',
     gap: 10,
     paddingVertical: 4,
   },
+  tttRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   tttCell: {
-    width: '31%',
-    aspectRatio: 1,
+    flex: 1,
+    height: 88,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tttEmptyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D5DCEB',
   },
   tttToken: {
     width: 48,

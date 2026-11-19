@@ -1,5 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
-import { Pin, Plus, StickyNote, Trash2, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronLeft, Pin, Plus, StickyNote, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ScrollView,
@@ -117,6 +118,7 @@ const NoteCard = React.memo(function NoteCard({
 });
 
 export default function NotesScreen() {
+  const router = useRouter();
   const loveNotes = useCoupleStore((s) => s.loveNotes);
   const activePartnerId = useCoupleStore((s) => s.activePartnerId);
   const p1 = useCoupleStore((s) => s.partners.p1);
@@ -205,6 +207,13 @@ export default function NotesScreen() {
       <View style={styles.container}>
         {/* Clean Airy Header */}
         <View style={styles.header}>
+          <BouncyPressable
+            onPress={() => router.push('/')}
+            style={[styles.backBtn, SoftShadowSm]}
+            accessibilityLabel="Kembali ke Home">
+            <ChevronLeft size={19} color={Pastel.text} />
+          </BouncyPressable>
+
           <View style={styles.headerCopy}>
             <Text style={styles.pageTitle} maxFontSizeMultiplier={1.2}>
               Love Notes
@@ -398,6 +407,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     marginBottom: 14,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Pastel.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   headerCopy: {
     flex: 1,
