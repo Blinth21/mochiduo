@@ -4,13 +4,18 @@ import {
   ArrowLeftRight,
   Bell,
   Camera,
+  Check,
   ChevronRight,
   Cloud,
+  Coins,
+  Flame,
+  Gamepad2,
   Heart,
   ImagePlus,
   MapPin,
   Pin,
   Send,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react-native';
@@ -46,6 +51,10 @@ import {
   PhotoLightboxModal,
 } from '@/components/PhotoLightboxModal';
 import {
+  computeCoupleStreak,
+  getDailyQuestion,
+} from '@/constants/mochiduoPlay';
+import {
   BodyFontBold,
   BodyFontRegular,
   BodyFontSemi,
@@ -56,9 +65,15 @@ import {
   SoftShadow,
   SoftShadowSm,
 } from '@/constants/pastelTheme';
-import { useCoupleStore } from '@/store/useCoupleStore';
+import {
+  getDailyMissionSummary,
+  getProfileAccessory,
+  getProfileCoins,
+  getProfileSkin,
+  useCoupleStore,
+} from '@/store/useCoupleStore';
 import type { MoodId, PartnerId } from '@/types/couple';
-import { formatRelativeTime } from '@/utils/dateCalc';
+import { formatRelativeTime, getLocalDateKey } from '@/utils/dateCalc';
 import { formatDistanceId, getDistanceMeters } from '@/utils/geoCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
 import { pickImageFromGallery, takePhotoWithCamera } from '@/utils/mediaPicker';
@@ -87,9 +102,24 @@ export default function HomeScreen() {
   const sendHug = useCoupleStore((s) => s.sendHug);
   const updateCoupleSettings = useCoupleStore((s) => s.updateCoupleSettings);
   const updatePartnerAvatar = useCoupleStore((s) => s.updatePartnerAvatar);
+  const claimDailyCheckIn = useCoupleStore((s) => s.claimDailyCheckIn);
+  const claimDailyQuestBonus = useCoupleStore((s) => s.claimDailyQuestBonus);
+  const pushFeatureNotification = useCoupleStore((s) => s.pushFeatureNotification);
 
   const activePartner = activePartnerId === 'p1' ? p1 : p2;
   const partnerOther = activePartnerId === 'p1' ? p2 : p1;
+  const todayKey = getLocalDateKey();
+  const myCoins = getProfileCoins(activePartner);
+  const streakInfo = useMemo(
+    () => computeCoupleStreak(p1.activeDays, p2.activeDays, todayKey),
+    [p1.activeDays, p2.activeDays, todayKey]
+  );
+  const missionSummary = useMemo(
+    () => getDailyMissionSummary(activePartner, todayKey),
+    [activePartner, todayKey]
+  );
+  const todayQuestion = useMemo(() => getDailyQuestion(todayKey), [todayKey]);
+
   const partnerLoc = activePartnerId === 'p1' ? loc2 : loc1;
   const distanceLabel =
     loc1.isSharing && loc2.isSharing
@@ -367,14 +397,18 @@ export default function HomeScreen() {
                 ) : null}
               </View>
 
-              <View style={styles.mascotStage}>
+              <BouncyPressable
+                onPress={() => router.push('/play?tab=shop')}
+                style={styles.mascotStage}>
                 <MochiMascot
                   bodyColor={p1.mochiColor}
                   auraColor={p1.auraColor}
+                  skinId={getProfileSkin(p1)}
+                  accessoryId={getProfileAccessory(p1)}
                   mood={p1.mood}
                   size={80}
                 />
-              </View>
+              </BouncyPressable>
 
               <View style={[styles.moodPill, { backgroundColor: p1MoodObj.bg }]}>
                 <Text style={styles.moodPillEmoji}>{p1MoodObj.emoji}</Text>
@@ -435,15 +469,19 @@ export default function HomeScreen() {
                 ) : null}
               </View>
 
-              <View style={styles.mascotStage}>
+              <BouncyPressable
+                onPress={() => router.push('/play?tab=shop')}
+                style={styles.mascotStage}>
                 <MochiMascot
                   bodyColor={p2.mochiColor}
                   auraColor={p2.auraColor}
+                  skinId={getProfileSkin(p2)}
+                  accessoryId={getProfileAccessory(p2)}
                   mood={p2.mood}
                   size={80}
                   delayMs={450}
                 />
-              </View>
+              </BouncyPressable>
 
               <View style={[styles.moodPill, { backgroundColor: p2MoodObj.bg }]}>
                 <Text style={styles.moodPillEmoji}>{p2MoodObj.emoji}</Text>
@@ -496,6 +534,148 @@ export default function HomeScreen() {
                 Pelukan terakhir dari {lastHugSenderName} · {formatRelativeTime(lastHugAt)}
               </Text>
             ) : null}
+          </View>
+
+          {/* 3B. Streak Berdua, Mochi Coins & 3 Misi Harian Bento */}
+          <View style={[styles.engagementCard, SoftShadow]}>
+            <View style={styles.engagementTopRow}>
+              <View style={styles.streakBadge}>
+                <Flame size={15} color={Pastel.peach} />
+                <Text style={styles.streakBadgeText} maxFontSizeMultiplier={1.15}>
+                  {streakInfo.streak} Hari Streak
+                </Text>
+              </View>
+
+              <BouncyPressable
+                onPress={() => router.push('/play?tab=shop')}
+                style={styles.coinsBadge}>
+                <Coins size={14} color={Pastel.honeyDark} />
+                <Text style={styles.coinsBadgeText} maxFontSizeMultiplier={1.15}>
+                  {myCoins} Koin
+                </Text>
+              </BouncyPressable>
+            </View>
+
+            <Text style={styles.streakHint}>{streakInfo.statusText}</Text>
+
+            <View style={styles.missionsRow}>
+              {([
+                { label: 'Absen Harian', done: missionSummary.m1CheckIn },
+                { label: 'Sapa Pasangan', done: missionSummary.m2Interact },
+                { label: 'Main / Q&A', done: missionSummary.m3PlayOrQa },
+              ] as const).map((m) => (
+                <View
+                  key={m.label}
+                  style={[
+                    styles.missionPill,
+                    m.done && styles.missionPillDone,
+                  ]}>
+                  {m.done ? (
+                    <Check size={12} color={Pastel.matcha} />
+                  ) : (
+                    <Sparkles size={11} color={Pastel.textSoft} />
+                  )}
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    maxFontSizeMultiplier={1.1}
+                    style={[
+                      styles.missionPillText,
+                      m.done && styles.missionPillTextDone,
+                    ]}>
+                    {m.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {!missionSummary.m1CheckIn ? (
+              <BouncyPressable
+                onPress={() => {
+                  triggerSuccessHaptic();
+                  const res = claimDailyCheckIn(activePartnerId);
+                  if (res.claimed) {
+                    pushFeatureNotification({
+                      category: 'play',
+                      emoji: '🔥',
+                      title: 'Absen Harian Berhasil!',
+                      body: `Streak bertambah & kamu dapat +${res.reward} Mochi Koin 🪙`,
+                      route: '/play',
+                      systemAlert: false,
+                    });
+                  }
+                }}
+                style={styles.claimBtn}>
+                <Text style={styles.claimBtnText} maxFontSizeMultiplier={1.15}>
+                  Absen Harian Sekarang (+20 🪙)
+                </Text>
+              </BouncyPressable>
+            ) : missionSummary.allComplete && !missionSummary.bonusClaimed ? (
+              <BouncyPressable
+                onPress={() => {
+                  triggerSuccessHaptic();
+                  const res = claimDailyQuestBonus(activePartnerId);
+                  if (res.claimed) {
+                    pushFeatureNotification({
+                      category: 'play',
+                      emoji: '🎉',
+                      title: 'Bonus 3 Misi Harian Terklaim!',
+                      body: `Mantap! Kamu dapat peti +${res.reward} Mochi Koin 🪙`,
+                      route: '/play?tab=shop',
+                      systemAlert: false,
+                    });
+                  }
+                }}
+                style={[styles.claimBtn, { backgroundColor: Pastel.matcha }]}>
+                <Text style={styles.claimBtnText} maxFontSizeMultiplier={1.15}>
+                  Klaim Bonus 3 Misi Selesai (+35 🪙)
+                </Text>
+              </BouncyPressable>
+            ) : null}
+          </View>
+
+          {/* 3C. 2-Col Daily Q&A + MochiPlay Toko & Mini-Game */}
+          <View style={styles.playGrid}>
+            <BouncyPressable
+              onPress={() => router.push('/play?tab=qa')}
+              style={[styles.playBento, SoftShadow, { backgroundColor: Pastel.taroSoft }]}>
+              <View style={styles.playBentoTop}>
+                <Text style={styles.playBentoEmoji}>{todayQuestion.emoji}</Text>
+                <View style={styles.playTagPill}>
+                  <Text style={[styles.playTagText, { color: Pastel.taro }]} maxFontSizeMultiplier={1.1}>
+                    Q&A Harian
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.playBentoTitle} numberOfLines={2}>
+                {todayQuestion.prompt}
+              </Text>
+              <Text style={styles.playBentoSub} numberOfLines={1}>
+                {activePartner.qaResponses?.[todayKey]
+                  ? 'Sudah dijawab · Lihat'
+                  : 'Jawab buat +25 🪙 →'}
+              </Text>
+            </BouncyPressable>
+
+            <BouncyPressable
+              onPress={() => router.push('/play?tab=shop')}
+              style={[styles.playBento, SoftShadow, { backgroundColor: Pastel.honeySoft }]}>
+              <View style={styles.playBentoTop}>
+                <Gamepad2 size={19} color={Pastel.honeyDark} />
+                <View style={styles.playTagPill}>
+                  <Text style={[styles.playTagText, { color: Pastel.honeyDark }]} maxFontSizeMultiplier={1.1}>
+                    MochiPlay
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.playBentoTitle} numberOfLines={2}>
+                Toko Skin & Mini-Game Berdua
+              </Text>
+              <Text style={styles.playBentoSub} numberOfLines={1}>
+                Suit Taruhan · XOXO →
+              </Text>
+            </BouncyPressable>
           </View>
 
           {/* 4. Clean Borderless Location Bento Strip */}
@@ -1044,6 +1224,145 @@ const styles = StyleSheet.create({
     fontFamily: RoundedFont,
     fontSize: 12,
     lineHeight: 17,
+    color: Pastel.textMuted,
+  },
+  engagementCard: {
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 24,
+    padding: 16,
+    gap: 10,
+  },
+  engagementTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Pastel.peachSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  streakBadgeText: {
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Pastel.peach,
+    paddingRight: 2,
+  },
+  coinsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Pastel.honeySoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  coinsBadgeText: {
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Pastel.honeyDark,
+    paddingRight: 2,
+  },
+  streakHint: {
+    fontFamily: RoundedFont,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: Pastel.textMuted,
+  },
+  missionsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  missionPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: Pastel.bgMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  missionPillDone: {
+    backgroundColor: Pastel.matchaSoft,
+  },
+  missionPillText: {
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.textMuted,
+    paddingRight: 2,
+  },
+  missionPillTextDone: {
+    fontFamily: BodyFontBold,
+    color: Pastel.matcha,
+  },
+  claimBtn: {
+    backgroundColor: Pastel.coral,
+    borderRadius: 999,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  claimBtnText: {
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: Pastel.pureWhite,
+    paddingRight: 2,
+  },
+  playGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  playBento: {
+    flex: 1,
+    borderRadius: 24,
+    padding: 15,
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  playBentoTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  playBentoEmoji: {
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  playTagPill: {
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  playTagText: {
+    fontFamily: BodyFontBold,
+    fontSize: 10.5,
+    lineHeight: 15,
+    paddingRight: 2,
+  },
+  playBentoTitle: {
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: Pastel.text,
+  },
+  playBentoSub: {
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: Pastel.textMuted,
   },
   locationStrip: {

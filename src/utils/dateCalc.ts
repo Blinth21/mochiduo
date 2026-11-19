@@ -100,3 +100,20 @@ export function formatRelativeTime(timestampMs: number, nowMs: number = Date.now
   const diffDays = Math.floor(diffHr / 24);
   return `${diffDays} hari lalu`;
 }
+
+export function getLocalDateKey(nowMs: number = Date.now()): string {
+  const d = new Date(nowMs);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function shiftDateKey(dateKey: string, deltaDays: number): string {
+  const d = parseLocalDate(dateKey);
+  d.setDate(d.getDate() + deltaDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}

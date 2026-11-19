@@ -72,6 +72,8 @@ export function isCategoryEnabled(
       return prefs.location;
     case 'anniversary':
       return prefs.anniversary;
+    case 'play':
+      return prefs.play ?? true;
     default:
       return true;
   }

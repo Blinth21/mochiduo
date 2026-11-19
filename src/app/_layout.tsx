@@ -24,7 +24,7 @@ import {
   setupNotificationHandler,
 } from '@/services/notifications';
 import { useCoupleStore } from '@/store/useCoupleStore';
-import { getNextAnniversaryInfo } from '@/utils/dateCalc';
+import { getLocalDateKey, getNextAnniversaryInfo } from '@/utils/dateCalc';
 import { getDistanceMeters } from '@/utils/geoCalc';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -44,6 +44,7 @@ function LiveSyncBridge() {
   const applyRemoteNoteDelete = useCoupleStore((s) => s.applyRemoteNoteDelete);
   const applyRemoteMessageUpsert = useCoupleStore((s) => s.applyRemoteMessageUpsert);
   const applyRemoteMessageDelete = useCoupleStore((s) => s.applyRemoteMessageDelete);
+  const applyRemotePlayEvent = useCoupleStore((s) => s.applyRemotePlayEvent);
   const setPartnerTyping = useCoupleStore((s) => s.setPartnerTyping);
   const setOnlinePartners = useCoupleStore((s) => s.setOnlinePartners);
 
@@ -99,6 +100,7 @@ function LiveSyncBridge() {
       onNoteDelete: applyRemoteNoteDelete,
       onMessageUpsert: applyRemoteMessageUpsert,
       onMessageDelete: applyRemoteMessageDelete,
+      onPlayEvent: applyRemotePlayEvent,
       onTypingChange: setPartnerTyping,
       onPresenceChange: setOnlinePartners,
       onStatusChange: (status, err) => {
@@ -122,6 +124,7 @@ function LiveSyncBridge() {
     applyRemoteMessageUpsert,
     applyRemoteNoteDelete,
     applyRemoteNoteUpsert,
+    applyRemotePlayEvent,
     applyRemoteRoom,
     setOnlinePartners,
     setPartnerTyping,
@@ -274,7 +277,7 @@ function NotificationBridge() {
   }, [router]);
 
   useEffect(() => {
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = getLocalDateKey();
     if (lastAnnivNotifiedKey === todayKey) return;
 
     const info = getNextAnniversaryInfo(anniversaryDate, Date.now());
@@ -369,6 +372,7 @@ export default function RootLayout() {
           <Tabs.Screen name="lokasi" options={{ title: 'Lokasi' }} />
           <Tabs.Screen name="dates" options={{ title: 'Kencan' }} />
           <Tabs.Screen name="notes" options={{ title: 'Catatan' }} />
+          <Tabs.Screen name="play" options={{ href: null, title: 'MochiPlay' }} />
         </Tabs>
       </SafeAreaProvider>
     </GestureHandlerRootView>

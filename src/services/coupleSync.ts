@@ -8,6 +8,7 @@ import type {
   MemoryItem,
   PartnerId,
   PartnerProfile,
+  PlayBroadcastEvent,
   SyncConfig,
 } from '@/types/couple';
 
@@ -227,6 +228,7 @@ export interface RoomRealtimeHandlers {
   onMessageDelete: (id: string) => void;
   onTypingChange: (senderId: PartnerId, isTyping: boolean) => void;
   onLiveLocationBroadcast: (partnerId: PartnerId, loc: LocationSnapshot) => void;
+  onPlayEvent?: (event: PlayBroadcastEvent) => void;
   onPresenceChange: (online: Record<PartnerId, boolean>) => void;
   onStatusChange: (status: 'connected' | 'error', err?: string) => void;
 }
@@ -312,6 +314,12 @@ export function subscribeToRoom(
         handlers.onLiveLocationBroadcast(payload.partnerId, payload.location);
       }
     })
+    .on('broadcast', { event: 'play_game' }, (msg) => {
+      const payload = msg.payload as PlayBroadcastEvent | undefined;
+      if (payload?.type && handlers.onPlayEvent) {
+        handlers.onPlayEvent(payload);
+      }
+    })
     .on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       handlers.onPresenceChange({
@@ -363,6 +371,15 @@ export function broadcastLiveLocation(
     type: 'broadcast',
     event: 'live_location',
     payload: { partnerId, location },
+  });
+}
+
+export function broadcastPlayEvent(roomCode: string, event: PlayBroadcastEvent): void {
+  if (!activeRoomChannel || activeRoomKey !== roomCode.trim().toUpperCase()) return;
+  void activeRoomChannel.send({
+    type: 'broadcast',
+    event: 'play_game',
+    payload: event,
   });
 }
 

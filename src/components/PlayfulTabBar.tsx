@@ -97,11 +97,14 @@ export const PlayfulTabBar = React.memo(function PlayfulTabBar({
 
   const bottomPad = Math.max(insets?.bottom ?? safeInsets.bottom, Platform.OS === 'web' ? 12 : 8);
 
+  const visibleRoutes = state.routes.filter((r) => Boolean(TAB_LABELS[r.name]));
+  const currentRouteKey = state.routes[state.index]?.key;
+
   return (
     <View style={[styles.dockOuter, { paddingBottom: bottomPad }]}>
       <View style={styles.dockInner}>
-        {state.routes.map((route, index) => {
-          const isFocused = state.index === index;
+        {visibleRoutes.map((route) => {
+          const isFocused = currentRouteKey === route.key;
           const label = TAB_LABELS[route.name] ?? route.name;
           const iconColor = isFocused ? Pastel.coral : Pastel.textSoft;
 

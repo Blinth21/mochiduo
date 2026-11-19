@@ -6,6 +6,39 @@ export type MemoryTag = 'date' | 'food' | 'trip' | 'random';
 export type BucketCategory = 'hangout' | 'food' | 'cozy' | 'milestone';
 export type NoteColorId = (typeof NOTE_PALETTES)[number]['id'];
 
+export type MochiSkinId =
+  | 'peach'
+  | 'matcha'
+  | 'strawberry'
+  | 'taro'
+  | 'honey'
+  | 'choco';
+
+export type MochiAccessoryId =
+  | 'none'
+  | 'bow'
+  | 'cat_ears'
+  | 'beret'
+  | 'shades'
+  | 'headphone'
+  | 'crown';
+
+export interface DailyQaEntry {
+  questionId: string;
+  answer: string;
+  answeredAt: number;
+}
+
+export interface PartnerGiftNotice {
+  id: string;
+  fromId: PartnerId;
+  itemId: string;
+  itemName: string;
+  emoji: string;
+  kind: 'skin' | 'accessory';
+  createdAt: number;
+}
+
 export interface PartnerProfile {
   id: PartnerId;
   name: string;
@@ -16,6 +49,16 @@ export interface PartnerProfile {
   mood: MoodId;
   statusText: string;
   updatedAt: number;
+  // Engagement, Skins, Streak & Q&A fields (stored inside jsonb profile -> zero SQL migration)
+  coins?: number;
+  skinId?: MochiSkinId;
+  accessoryId?: MochiAccessoryId;
+  unlockedSkins?: MochiSkinId[];
+  unlockedAccessories?: MochiAccessoryId[];
+  activeDays?: string[]; // YYYY-MM-DD
+  dailyClaims?: Record<string, string[]>; // dateKey -> claimed mission IDs
+  qaResponses?: Record<string, DailyQaEntry>; // dateKey -> answer
+  latestGift?: PartnerGiftNotice;
 }
 
 export interface LocationSnapshot {
@@ -94,6 +137,58 @@ export interface ChatMessage {
   createdAt: number;
 }
 
+export type SuitChoice = 'rock' | 'paper' | 'scissors';
+export type SuitMode = 'live' | 'bot';
+
+export interface SuitMatchState {
+  roundId: string;
+  mode: SuitMode;
+  stake: string;
+  picks: Partial<Record<PartnerId, SuitChoice>>;
+  winner: PartnerId | 'draw' | null;
+  updatedAt: number;
+}
+
+export type TttCell = PartnerId | null;
+export type TttMode = 'live' | 'bot' | 'local';
+
+export interface TttMatchState {
+  matchId: string;
+  mode: TttMode;
+  board: TttCell[];
+  turn: PartnerId;
+  winner: PartnerId | 'draw' | null;
+  winLine: number[] | null;
+  scores: Record<PartnerId, number>;
+  updatedAt: number;
+}
+
+export type PlayBroadcastEvent =
+  | {
+      type: 'suit_pick';
+      roundId: string;
+      partnerId: PartnerId;
+      choice: SuitChoice;
+      stake: string;
+    }
+  | {
+      type: 'suit_reset';
+      roundId: string;
+      stake: string;
+      by: PartnerId;
+    }
+  | {
+      type: 'ttt_move';
+      matchId: string;
+      index: number;
+      by: PartnerId;
+    }
+  | {
+      type: 'ttt_reset';
+      matchId: string;
+      starter: PartnerId;
+    };
+
 export type NotificationCategory =
   | 'chat'
   | 'hug'
@@ -102,7 +197,8 @@ export type NotificationCategory =
   | 'memories'
   | 'dates'
   | 'location'
-  | 'anniversary';
+  | 'anniversary'
+  | 'play';
 
 export interface NotificationPrefs {
   enabled: boolean;
@@ -113,6 +209,7 @@ export interface NotificationPrefs {
   dates: boolean;
   location: boolean;
   anniversary: boolean;
+  play: boolean;
 }
 
 export interface InAppNotification {
