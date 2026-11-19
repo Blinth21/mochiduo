@@ -79,12 +79,45 @@ function buildLeafletHtml(params: {
   <div id="map"></div>
   <script>
     var state = ${JSON.stringify(params)};
-    var map = L.map('map', { zoomControl: true, attributionControl: true }).setView([state.myLat, state.myLng], 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
+    var map = L.map('map', { zoomControl: true, attributionControl: true }).setView([state.myLat, state.myLng], 15);
+
+    var streetLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=id&x={x}&y={y}&z={z}', {
+      subdomains: ['0', '1', '2', '3'],
+      maxZoom: 20,
+      attribution: '&copy; Maps'
+    });
+
+    var satLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=id&x={x}&y={y}&z={z}', {
+      subdomains: ['0', '1', '2', '3'],
+      maxZoom: 20,
+      attribution: '&copy; Satellite'
+    });
+
+    var fallbackLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
-    }).addTo(map);
+      attribution: '&copy; Esri'
+    });
+
+    var activeLayer = streetLayer.addTo(map);
+    var tileErrorCount = 0;
+    streetLayer.on('tileerror', function() {
+      tileErrorCount += 1;
+      if (tileErrorCount >= 3 && activeLayer === streetLayer) {
+        map.removeLayer(streetLayer);
+        activeLayer = fallbackLayer.addTo(map);
+      }
+    });
+
+    window.setMapStyle = function(mode) {
+      if (activeLayer) map.removeLayer(activeLayer);
+      if (mode === 'sat') {
+        activeLayer = satLayer.addTo(map);
+      } else if (mode === 'esri') {
+        activeLayer = fallbackLayer.addTo(map);
+      } else {
+        activeLayer = streetLayer.addTo(map);
+      }
+    };
 
     function makeIcon(initial, name, color) {
       return L.divIcon({
@@ -155,6 +188,7 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [mapStyle, setMapStyle] = useState<'street' | 'sat'>('street');
 
   const initialHtml = useMemo(
     () =>
@@ -224,6 +258,14 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
     webViewRef.current?.injectJavaScript('window.focusPartner(); true;');
   }, []);
 
+  const handleToggleStyle = useCallback(() => {
+    setMapStyle((prev) => {
+      const next = prev === 'street' ? 'sat' : 'street';
+      webViewRef.current?.injectJavaScript(`window.setMapStyle("${next}"); true;`);
+      return next;
+    });
+  }, []);
+
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -234,9 +276,17 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
           </Text>
         </View>
 
-        <View style={styles.liveTag}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveTagText}>Peta Live</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <BouncyPressable onPress={handleToggleStyle} style={styles.styleTogglePill}>
+            <Text style={styles.styleToggleText}>
+              {mapStyle === 'street' ? '🛰️ Satelit' : '🗺️ Jalan'}
+            </Text>
+          </BouncyPressable>
+
+          <View style={styles.liveTag}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveTagText}>Live</Text>
+          </View>
         </View>
       </View>
 
@@ -270,12 +320,13 @@ export const CoupleLocationMap = React.memo(function CoupleLocationMap({
           <TypedWebView
             key={reloadKey}
             ref={webViewRef}
-            source={{ html: initialHtml }}
+            source={{ html: initialHtml, baseUrl: 'https://mochiduo.app/' }}
             style={styles.webview}
             originWhitelist={['*']}
             javaScriptEnabled
             domStorageEnabled
             nestedScrollEnabled
+            mixedContentMode="compatibility"
             onLoadEnd={() => setMapReady(true)}
             onError={() => setMapError(true)}
           />
@@ -359,6 +410,20 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '800',
     color: '#178C68',
+  },
+  styleTogglePill: {
+    backgroundColor: Pastel.taroSoft,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#D6CCFF',
+  },
+  styleToggleText: {
+    fontFamily: RoundedFont,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#5B43D6',
   },
   mapFrame: {
     width: '100%',
