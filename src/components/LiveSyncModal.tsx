@@ -54,7 +54,7 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
   const disconnectLiveSync = useCoupleStore((s) => s.disconnectLiveSync);
 
   const [role, setRole] = useState<PartnerId>(activePartnerId);
-  const [roomCode, setRoomCode] = useState(syncConfig.roomCode || 'MOCHI-2026');
+  const [roomCode, setRoomCode] = useState(syncConfig.roomCode);
   const [supabaseUrl, setSupabaseUrl] = useState(syncConfig.supabaseUrl);
   const [anonKey, setAnonKey] = useState(syncConfig.supabaseAnonKey);
   const [localMsg, setLocalMsg] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
   useEffect(() => {
     if (visible) {
       setRole(activePartnerId);
-      setRoomCode(syncConfig.roomCode || 'MOCHI-2026');
+      setRoomCode(syncConfig.roomCode);
       setSupabaseUrl(syncConfig.supabaseUrl);
       setAnonKey(syncConfig.supabaseAnonKey);
       setLocalMsg(null);

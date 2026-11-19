@@ -559,6 +559,15 @@ export default function ChatScreen() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.emptyChatCard}>
+                <Text style={styles.emptyChatEmoji}>💬</Text>
+                <Text style={styles.emptyChatTitle}>Belum ada chat di sini</Text>
+                <Text style={styles.emptyChatSub}>
+                  Kirim sapaan manis, stiker gemas, atau foto pertama ke {partner.name} lewat kolom di bawah!
+                </Text>
+              </View>
+            }
           />
         </View>
 
@@ -967,6 +976,32 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 14,
     paddingVertical: 14,
+  },
+  emptyChatCard: {
+    marginTop: 44,
+    marginHorizontal: 16,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyChatEmoji: {
+    fontSize: 34,
+    lineHeight: 42,
+  },
+  emptyChatTitle: {
+    fontFamily: BodyFontBold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: Pastel.text,
+  },
+  emptyChatSub: {
+    fontFamily: RoundedFont,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Pastel.textMuted,
+    textAlign: 'center',
   },
   dateDividerWrap: {
     alignItems: 'center',

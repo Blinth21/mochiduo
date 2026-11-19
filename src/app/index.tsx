@@ -69,7 +69,7 @@ import {
   getProfileSkin,
   useCoupleStore,
 } from '@/store/useCoupleStore';
-import type { MoodId, PartnerId } from '@/types/couple';
+import type { MoodId, PartnerId, PlaySectionTab } from '@/types/couple';
 import { formatRelativeTime, getLocalDateKey } from '@/utils/dateCalc';
 import { formatDistanceId, getDistanceMeters } from '@/utils/geoCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
@@ -106,7 +106,7 @@ export default function HomeScreen() {
   const pushFeatureNotification = useCoupleStore((s) => s.pushFeatureNotification);
 
   const openPlayTab = useCallback(
-    (tab: 'suit' | 'ttt' | 'shop') => {
+    (tab: PlaySectionTab) => {
       triggerMediumHaptic();
       setPlaySectionTab(tab);
       router.push('/play');
@@ -642,7 +642,11 @@ export default function HomeScreen() {
                   Kencan
                 </Text>
                 <Text style={styles.shortcutSub} numberOfLines={1}>
-                  {todoDatesCount > 0 ? `${todoDatesCount} rencana` : 'Semua beres ✨'}
+                  {bucketList.length === 0
+                    ? 'Buat rencana kencan'
+                    : todoDatesCount > 0
+                      ? `${todoDatesCount} rencana`
+                      : 'Semua beres ✨'}
                 </Text>
               </View>
             </BouncyPressable>
@@ -658,7 +662,7 @@ export default function HomeScreen() {
                   Love Notes
                 </Text>
                 <Text style={styles.shortcutSub} numberOfLines={1}>
-                  {loveNotes.length} catatan
+                  {loveNotes.length > 0 ? `${loveNotes.length} catatan` : 'Tulis catatan'}
                 </Text>
               </View>
             </BouncyPressable>

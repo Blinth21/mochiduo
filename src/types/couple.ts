@@ -149,6 +149,8 @@ export interface SuitMatchState {
   updatedAt: number;
 }
 
+export type PlaySectionTab = 'suit' | 'ttt' | 'memory' | 'catch' | 'shop';
+
 export type TttCell = PartnerId | null;
 export type TttMode = 'live' | 'bot' | 'local';
 

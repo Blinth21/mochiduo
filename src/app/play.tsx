@@ -4,8 +4,10 @@ import {
   Eye,
   Flame,
   Gift,
+  Play,
   RefreshCw,
   ShoppingBag,
+  Timer,
   Trophy,
   X,
 } from 'lucide-react-native';
@@ -27,9 +29,11 @@ import { MochiMascot } from '@/components/MochiMascot';
 import {
   MOCHI_ACCESSORIES,
   MOCHI_SKINS,
+  type MemoryCardItem,
   SUIT_CHOICES,
   SUIT_PRESET_STAKES,
   computeCoupleStreak,
+  createShuffledMemoryDeck,
   getMochiSkinSpec,
 } from '@/constants/mochiduoPlay';
 import {
@@ -52,23 +56,30 @@ import type {
   MochiAccessoryId,
   MochiSkinId,
   PartnerId,
+  PlaySectionTab,
   SuitChoice,
 } from '@/types/couple';
 import { getLocalDateKey } from '@/utils/dateCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
 
-type PlaySectionTab = 'suit' | 'ttt' | 'shop';
-
 const SECTION_TABS: { id: PlaySectionTab; label: string; emoji: string }[] = [
   { id: 'suit', label: 'Suit', emoji: '✌️' },
-  { id: 'ttt', label: 'XOXO', emoji: '🎮' },
-  { id: 'shop', label: 'Toko Skin', emoji: '🎨' },
+  { id: 'ttt', label: 'XOXO', emoji: '⭕' },
+  { id: 'memory', label: 'Memori', emoji: '🃏' },
+  { id: 'catch', label: 'Tangkap', emoji: '🧁' },
+  { id: 'shop', label: 'Toko', emoji: '🎨' },
 ];
 
 const TTT_ROWS = [
   [0, 1, 2],
   [3, 4, 5],
   [6, 7, 8],
+] as const;
+
+const MEMORY_ROWS = [
+  [0, 1, 2, 3],
+  [4, 5, 6, 7],
+  [8, 9, 10, 11],
 ] as const;
 
 export default function MochiPlayScreen() {
@@ -85,6 +96,20 @@ export default function MochiPlayScreen() {
     id: MochiAccessoryId;
   } | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Mini-game 3: Mochi Memori (4x3 flip cards)
+  const [memMode, setMemMode] = useState<'solo' | 'local'>('solo');
+  const [memDeck, setMemDeck] = useState<MemoryCardItem[]>(() =>
+    createShuffledMemoryDeck()
+  );
+  const [memFlipped, setMemFlipped] = useState<number[]>([]);
+  const [memMoves, setMemMoves] = useState(0);
+  const [memTurn, setMemTurn] = useState<PartnerId>('p1');
+  const [memScores, setMemScores] = useState<Record<PartnerId, number>>({
+    p1: 0,
+    p2: 0,
+  });
+  const [memEarnedCoins, setMemEarnedCoins] = useState<number | null>(null);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -106,6 +131,8 @@ export default function MochiPlayScreen() {
   const syncStatus = useCoupleStore((s) => s.syncStatus);
   const suitGame = useCoupleStore((s) => s.suitGame);
   const tttGame = useCoupleStore((s) => s.tttGame);
+  const catchGame = useCoupleStore((s) => s.catchGame);
+  const bestCatchScore = useCoupleStore((s) => s.bestCatchScore);
 
   const buyShopItem = useCoupleStore((s) => s.buyShopItem);
   const equipShopItem = useCoupleStore((s) => s.equipShopItem);
@@ -116,7 +143,111 @@ export default function MochiPlayScreen() {
   const setTttMode = useCoupleStore((s) => s.setTttMode);
   const makeTttMove = useCoupleStore((s) => s.makeTttMove);
   const resetTttMatch = useCoupleStore((s) => s.resetTttMatch);
+  const recordMiniGameReward = useCoupleStore((s) => s.recordMiniGameReward);
+  const startCatchGame = useCoupleStore((s) => s.startCatchGame);
+  const stopCatchGame = useCoupleStore((s) => s.stopCatchGame);
+  const spawnCatchSlots = useCoupleStore((s) => s.spawnCatchSlots);
+  const tapCatchSlot = useCoupleStore((s) => s.tapCatchSlot);
+  const tickCatchSecond = useCoupleStore((s) => s.tickCatchSecond);
   const pushFeatureNotification = useCoupleStore((s) => s.pushFeatureNotification);
+
+  // Flip mismatched Memori cards back cleanly without refs
+  useEffect(() => {
+    if (memFlipped.length !== 2) return;
+    const [firstIdx, secondIdx] = memFlipped;
+    if (memDeck[firstIdx]?.pairId === memDeck[secondIdx]?.pairId) return;
+
+    const timer = setTimeout(() => {
+      setMemFlipped([]);
+      if (memMode === 'local') {
+        setMemTurn((prevTurn) => (prevTurn === 'p1' ? 'p2' : 'p1'));
+      }
+    }, 680);
+
+    return () => clearTimeout(timer);
+  }, [memDeck, memFlipped, memMode]);
+
+  // Run Tangkap Mochi timers cleanly via Zustand actions
+  useEffect(() => {
+    if (catchGame.phase !== 'playing') return;
+
+    const spawnTimer = setInterval(() => {
+      spawnCatchSlots();
+    }, 680);
+
+    const countdownTimer = setInterval(() => {
+      const finished = tickCatchSecond();
+      if (finished) {
+        triggerSuccessHaptic();
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(spawnTimer);
+      clearInterval(countdownTimer);
+    };
+  }, [catchGame.phase, spawnCatchSlots, tickCatchSecond]);
+
+  const resetMemoryGame = (nextMode?: 'solo' | 'local') => {
+    if (nextMode) setMemMode(nextMode);
+    setMemDeck(createShuffledMemoryDeck());
+    setMemFlipped([]);
+    setMemMoves(0);
+    setMemTurn(activePartnerId);
+    setMemScores({ p1: 0, p2: 0 });
+    setMemEarnedCoins(null);
+  };
+
+  const handleFlipMemoryCard = (idx: number) => {
+    const card = memDeck[idx];
+    if (!card || card.matchedBy || memFlipped.length >= 2 || memFlipped.includes(idx)) {
+      return;
+    }
+    triggerMediumHaptic();
+
+    if (memFlipped.length === 0) {
+      setMemFlipped([idx]);
+      return;
+    }
+
+    const firstIdx = memFlipped[0];
+    setMemFlipped([firstIdx, idx]);
+    const nextMoves = memMoves + 1;
+    setMemMoves(nextMoves);
+
+    if (memDeck[firstIdx].pairId === card.pairId) {
+      const owner: PartnerId = memMode === 'solo' ? activePartnerId : memTurn;
+      const updatedDeck = memDeck.map((c, i) =>
+        i === firstIdx || i === idx ? { ...c, matchedBy: owner } : c
+      );
+      setMemDeck(updatedDeck);
+      setMemFlipped([]);
+      if (memMode === 'local') {
+        setMemScores((prev) => ({ ...prev, [owner]: prev[owner] + 1 }));
+      }
+      triggerSuccessHaptic();
+
+      if (updatedDeck.every((c) => Boolean(c.matchedBy))) {
+        const coins = memMode === 'solo' ? (nextMoves <= 9 ? 30 : 25) : 25;
+        setMemEarnedCoins(coins);
+        recordMiniGameReward(activePartnerId, coins);
+      }
+    }
+  };
+
+  const handleStartCatch = () => {
+    triggerSuccessHaptic();
+    startCatchGame();
+  };
+
+  const handleTapCatchHole = (idx: number) => {
+    const outcome = tapCatchSlot(idx);
+    if (outcome === 'positive') {
+      triggerSuccessHaptic();
+    } else if (outcome === 'negative') {
+      triggerMediumHaptic();
+    }
+  };
 
   const me = activePartnerId === 'p1' ? p1 : p2;
   const otherId: PartnerId = activePartnerId === 'p1' ? 'p2' : 'p1';
@@ -664,6 +795,328 @@ export default function MochiPlayScreen() {
     );
   };
 
+  const renderMemoryArena = () => {
+    const matchedPairs = memDeck.filter((c) => Boolean(c.matchedBy)).length / 2;
+    const isFinished = matchedPairs === 6;
+    const memWinnerName =
+      memScores.p1 > memScores.p2
+        ? p1.name
+        : memScores.p2 > memScores.p1
+          ? p2.name
+          : null;
+
+    return (
+      <View style={styles.sectionStack}>
+        <View style={[styles.bentoCard, SoftShadow]}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitle}>Memori Kartu Mochi</Text>
+            <BouncyPressable
+              onPress={() => {
+                triggerMediumHaptic();
+                resetMemoryGame();
+              }}
+              style={styles.resetPillBtn}>
+              <RefreshCw size={13} color={Pastel.text} />
+              <Text style={styles.resetPillText}>Acak Ulang</Text>
+            </BouncyPressable>
+          </View>
+
+          <View style={styles.tttModeRow}>
+            {([
+              { id: 'solo', label: 'Main Solo' },
+              { id: 'local', label: '1 HP Gantian' },
+            ] as const).map((m) => {
+              const selected = memMode === m.id;
+              return (
+                <BouncyPressable
+                  key={m.id}
+                  onPress={() => {
+                    triggerMediumHaptic();
+                    resetMemoryGame(m.id);
+                  }}
+                  style={[
+                    styles.tttModePill,
+                    selected && { backgroundColor: Pastel.skySoft },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.tttModeText,
+                      selected && { color: Pastel.sky, fontFamily: BodyFontBold },
+                    ]}
+                    maxFontSizeMultiplier={1.15}>
+                    {m.label}
+                  </Text>
+                </BouncyPressable>
+              );
+            })}
+          </View>
+
+          {memMode === 'solo' ? (
+            <View style={styles.memStatsRow}>
+              <View style={[styles.memStatPill, { backgroundColor: Pastel.coralSoft }]}>
+                <Text style={styles.memStatLabel}>Pasang</Text>
+                <Text style={[styles.memStatVal, { color: Pastel.coralDark }]}>
+                  {matchedPairs}/6
+                </Text>
+              </View>
+              <View style={[styles.memStatPill, { backgroundColor: Pastel.skySoft }]}>
+                <Text style={styles.memStatLabel}>Langkah</Text>
+                <Text style={[styles.memStatVal, { color: Pastel.sky }]}>
+                  {memMoves}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.scoreRow}>
+              <View style={[styles.scoreBox, { backgroundColor: p1SkinSpec.pillBg }]}>
+                <Text style={styles.scoreName} numberOfLines={1}>
+                  {p1.name}
+                </Text>
+                <Text style={[styles.scoreNum, { color: p1SkinSpec.accent }]}>
+                  {memScores.p1}
+                </Text>
+              </View>
+
+              <View style={styles.turnCenterPill}>
+                <Text style={styles.turnCenterText} numberOfLines={2}>
+                  {isFinished
+                    ? memWinnerName
+                      ? `${memWinnerName} Menang! 🎉`
+                      : 'Seri! 🤝'
+                    : `Giliran:\n${memTurn === 'p1' ? p1.name : p2.name}`}
+                </Text>
+              </View>
+
+              <View style={[styles.scoreBox, { backgroundColor: p2SkinSpec.pillBg }]}>
+                <Text style={styles.scoreName} numberOfLines={1}>
+                  {p2.name}
+                </Text>
+                <Text style={[styles.scoreNum, { color: p2SkinSpec.accent }]}>
+                  {memScores.p2}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Explicit 3x4 Memory Card Grid */}
+          <View style={styles.memBoardWrap}>
+            {MEMORY_ROWS.map((row, rowIdx) => (
+              <View key={rowIdx} style={styles.memRow}>
+                {row.map((idx) => {
+                  const card = memDeck[idx];
+                  const isFlipped = memFlipped.includes(idx);
+                  const isMatched = Boolean(card?.matchedBy);
+                  const faceUp = isFlipped || isMatched;
+
+                  const matchedBg =
+                    card?.matchedBy === 'p2' ? p2SkinSpec.pillBg : p1SkinSpec.pillBg;
+
+                  return (
+                    <BouncyPressable
+                      key={card?.uid ?? idx}
+                      disabled={faceUp || memFlipped.length >= 2}
+                      onPress={() => handleFlipMemoryCard(idx)}
+                      style={[
+                        styles.memCard,
+                        faceUp ? SoftShadowSm : undefined,
+                        {
+                          backgroundColor: isMatched
+                            ? matchedBg
+                            : faceUp
+                              ? Pastel.bgElevated
+                              : Pastel.bgMuted,
+                        },
+                      ]}>
+                      {faceUp ? (
+                        <Text style={styles.memCardEmoji}>{card.emoji}</Text>
+                      ) : (
+                        <Text style={styles.memCardBack}>?</Text>
+                      )}
+                    </BouncyPressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+
+          {isFinished ? (
+            <View style={[styles.resultBox, { backgroundColor: Pastel.matchaSoft }]}>
+              <Trophy size={18} color={Pastel.matcha} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.resultTitle}>
+                  Semua Pasangan Ketemu! (+{memEarnedCoins ?? 25} 🪙)
+                </Text>
+                <Text style={styles.resultSub}>
+                  {memMode === 'solo'
+                    ? `Selesai dalam ${memMoves} langkah! ${memMoves <= 9 ? 'Bonus kece!' : ''}`
+                    : memWinnerName
+                      ? `${memWinnerName} paling jago nebak pasangan!`
+                      : 'Kompak banget berdua, skor imbang!'}
+                </Text>
+              </View>
+              <BouncyPressable
+                onPress={() => {
+                  triggerMediumHaptic();
+                  resetMemoryGame();
+                }}
+                style={styles.replayBtn}>
+                <RefreshCw size={14} color={Pastel.pureWhite} />
+                <Text style={styles.replayBtnText}>Lagi</Text>
+              </BouncyPressable>
+            </View>
+          ) : (
+            <Text style={styles.gameHintText}>
+              Cari 6 pasang kartu gemas dalam waktu sesingkat mungkin untuk dapat koin!
+            </Text>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderCatchArena = () => {
+    const displayedBest = Math.max(bestCatchScore, catchGame.score);
+
+    return (
+      <View style={styles.sectionStack}>
+        <View style={[styles.bentoCard, SoftShadow]}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.cardTitle}>Tangkap Mochi Kilat</Text>
+            <View style={styles.catchBestPill}>
+              <Trophy size={12} color={Pastel.honeyDark} />
+              <Text style={styles.catchBestText} maxFontSizeMultiplier={1.15}>
+                Rekor: {displayedBest}
+              </Text>
+            </View>
+          </View>
+
+          {/* Timer + Live Score Row */}
+          <View style={styles.memStatsRow}>
+            <View
+              style={[
+                styles.memStatPill,
+                {
+                  backgroundColor:
+                    catchGame.timeLeft <= 5 && catchGame.phase === 'playing'
+                      ? Pastel.coralSoft
+                      : Pastel.skySoft,
+                },
+              ]}>
+              <View style={styles.inlineIconRow}>
+                <Timer
+                  size={13}
+                  color={
+                    catchGame.timeLeft <= 5 && catchGame.phase === 'playing'
+                      ? Pastel.coralDark
+                      : Pastel.sky
+                  }
+                />
+                <Text style={styles.memStatLabel}>Waktu</Text>
+              </View>
+              <Text
+                style={[
+                  styles.memStatVal,
+                  {
+                    color:
+                      catchGame.timeLeft <= 5 && catchGame.phase === 'playing'
+                        ? Pastel.coralDark
+                        : Pastel.sky,
+                  },
+                ]}>
+                {catchGame.timeLeft} dtk
+              </Text>
+            </View>
+
+            <View style={[styles.memStatPill, { backgroundColor: Pastel.matchaSoft }]}>
+              <Text style={styles.memStatLabel}>Skor</Text>
+              <Text style={[styles.memStatVal, { color: Pastel.matcha }]}>
+                {catchGame.score}
+              </Text>
+            </View>
+          </View>
+
+          {/* Rule Legend */}
+          <View style={styles.catchLegendRow}>
+            <View style={[styles.catchLegendChip, { backgroundColor: Pastel.peachSoft }]}>
+              <Text style={styles.catchLegendText}>🍑 Mochi +1</Text>
+            </View>
+            <View style={[styles.catchLegendChip, { backgroundColor: Pastel.honeySoft }]}>
+              <Text style={styles.catchLegendText}>👑 Mahkota +3</Text>
+            </View>
+            <View style={[styles.catchLegendChip, { backgroundColor: Pastel.coralSoft }]}>
+              <Text style={styles.catchLegendText}>🌶️ Cabai -2</Text>
+            </View>
+          </View>
+
+          {/* Explicit 3x3 Hole Grid */}
+          <View style={styles.tttBoardWrap}>
+            {TTT_ROWS.map((row, rowIdx) => (
+              <View key={rowIdx} style={styles.tttRow}>
+                {row.map((idx) => {
+                  const slot = catchGame.slots[idx];
+                  const slotBg = !slot
+                    ? Pastel.bgMuted
+                    : slot.kind === 'crown'
+                      ? Pastel.honeySoft
+                      : slot.kind === 'bomb'
+                        ? Pastel.coralSoft
+                        : Pastel.bgElevated;
+
+                  return (
+                    <BouncyPressable
+                      key={idx}
+                      disabled={catchGame.phase !== 'playing' || !slot}
+                      onPress={() => handleTapCatchHole(idx)}
+                      style={[
+                        styles.tttCell,
+                        slot ? SoftShadowSm : undefined,
+                        { backgroundColor: slotBg },
+                      ]}>
+                      {slot ? (
+                        <Text style={styles.catchHoleEmoji}>{slot.emoji}</Text>
+                      ) : (
+                        <View style={styles.catchEmptyHole} />
+                      )}
+                    </BouncyPressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+
+          {catchGame.phase === 'playing' ? (
+            <Text style={styles.gameHintText}>
+              Tap Mochi &amp; Mahkota secepat mungkin! Hati-hati jangan kepencet 🌶️
+            </Text>
+          ) : catchGame.phase === 'done' ? (
+            <View style={[styles.resultBox, { backgroundColor: Pastel.matchaSoft }]}>
+              <Trophy size={18} color={Pastel.matcha} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.resultTitle}>
+                  Skor {catchGame.score} Poin! (+{catchGame.lastCoins} 🪙)
+                </Text>
+                <Text style={styles.resultSub}>
+                  {catchGame.score >= displayedBest && catchGame.score > 0
+                    ? 'Rekor baru! Refleks kamu gokil banget ⚡'
+                    : 'Ayo main lagi buat pecahin rekor tertinggi!'}
+                </Text>
+              </View>
+              <BouncyPressable onPress={handleStartCatch} style={styles.replayBtn}>
+                <RefreshCw size={14} color={Pastel.pureWhite} />
+                <Text style={styles.replayBtnText}>Lagi</Text>
+              </BouncyPressable>
+            </View>
+          ) : (
+            <BouncyPressable onPress={handleStartCatch} style={styles.catchStartBtn}>
+              <Play size={16} color={Pastel.pureWhite} fill={Pastel.pureWhite} />
+              <Text style={styles.catchStartText}>Mulai 25 Detik (+Koin 🪙)</Text>
+            </BouncyPressable>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   const p1DisplayedSkin =
     recipientId === 'p1' && previewSkinId ? previewSkinId : getProfileSkin(p1);
   const p1DisplayedAcc =
@@ -698,44 +1151,56 @@ export default function MochiPlayScreen() {
               </View>
             </View>
 
-            <View style={[styles.coinPill, SoftShadowSm]}>
+            <BouncyPressable
+              onPress={() => {
+                triggerMediumHaptic();
+                if (catchGame.phase === 'playing') stopCatchGame();
+                setActiveTab('shop');
+              }}
+              style={[styles.coinPill, SoftShadowSm]}>
               <Coins size={15} color={Pastel.honeyDark} />
               <Text style={styles.coinText} maxFontSizeMultiplier={1.15}>
                 {myCoins} Koin
               </Text>
-            </View>
+            </BouncyPressable>
           </View>
 
-          {/* 3-Pill Segmented Navigation */}
-          <View style={[styles.segmentBar, SoftShadowSm]}>
-            {SECTION_TABS.map((tab) => {
-              const selected = activeTab === tab.id;
-              return (
-                <BouncyPressable
-                  key={tab.id}
-                  onPress={() => {
-                    triggerMediumHaptic();
-                    setActiveTab(tab.id);
-                  }}
-                  style={[
-                    styles.segmentBtn,
-                    selected && styles.segmentBtnActive,
-                  ]}>
-                  <Text style={styles.segmentEmoji}>{tab.emoji}</Text>
-                  <Text
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
-                    maxFontSizeMultiplier={1.15}
+          {/* Horizontal 5-Pill Segmented Navigation */}
+          <View style={[styles.segmentBarOuter, SoftShadowSm]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.segmentScrollContent}>
+              {SECTION_TABS.map((tab) => {
+                const selected = activeTab === tab.id;
+                return (
+                  <BouncyPressable
+                    key={tab.id}
+                    onPress={() => {
+                      triggerMediumHaptic();
+                      if (catchGame.phase === 'playing' && tab.id !== 'catch') {
+                        stopCatchGame();
+                      }
+                      setActiveTab(tab.id);
+                    }}
                     style={[
-                      styles.segmentLabel,
-                      selected && styles.segmentLabelActive,
+                      styles.segmentBtn,
+                      selected && styles.segmentBtnActive,
                     ]}>
-                    {tab.label}
-                  </Text>
-                </BouncyPressable>
-              );
-            })}
+                    <Text style={styles.segmentEmoji}>{tab.emoji}</Text>
+                    <Text
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={1.15}
+                      style={[
+                        styles.segmentLabel,
+                        selected && styles.segmentLabelActive,
+                      ]}>
+                      {tab.label}
+                    </Text>
+                  </BouncyPressable>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* TAB 1: MOCHI SKIN & ACCESSORY SHOP */}
@@ -1071,6 +1536,12 @@ export default function MochiPlayScreen() {
 
           {/* TAB 3: TIC-TAC-TOE MOCHI */}
           {activeTab === 'ttt' ? renderTttArena() : null}
+
+          {/* TAB 4: MOCHI MEMORI */}
+          {activeTab === 'memory' ? renderMemoryArena() : null}
+
+          {/* TAB 5: TANGKAP MOCHI */}
+          {activeTab === 'catch' ? renderCatchArena() : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1134,21 +1605,22 @@ const styles = StyleSheet.create({
     color: Pastel.honeyDark,
     paddingRight: 2,
   },
-  segmentBar: {
-    flexDirection: 'row',
+  segmentBarOuter: {
     backgroundColor: Pastel.bgElevated,
     borderRadius: 20,
     padding: 5,
-    gap: 4,
+  },
+  segmentScrollContent: {
+    flexGrow: 1,
+    gap: 5,
   },
   segmentBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 5,
     paddingVertical: 9,
-    paddingHorizontal: 6,
+    paddingHorizontal: 13,
     borderRadius: 15,
   },
   segmentBtnActive: {
@@ -1160,7 +1632,7 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     fontFamily: BodyFontSemi,
-    fontSize: 12,
+    fontSize: 12.5,
     lineHeight: 17,
     color: Pastel.textMuted,
     paddingRight: 2,
@@ -1788,5 +2260,124 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 19,
     color: Pastel.pureWhite,
+  },
+  memStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  memStatPill: {
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  inlineIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  memStatLabel: {
+    fontFamily: BodyFontSemi,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.textMuted,
+  },
+  memStatVal: {
+    fontFamily: BodyFontBold,
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  memBoardWrap: {
+    width: '100%',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  memRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  memCard: {
+    flex: 1,
+    height: 76,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memCardEmoji: {
+    fontSize: 28,
+  },
+  memCardBack: {
+    fontFamily: BodyFontBold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: Pastel.textSoft,
+  },
+  gameHintText: {
+    fontFamily: RoundedFont,
+    fontSize: 12,
+    lineHeight: 17,
+    color: Pastel.textMuted,
+    textAlign: 'center',
+  },
+  catchBestPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Pastel.honeySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  catchBestText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.honeyDark,
+    paddingRight: 2,
+  },
+  catchLegendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  catchLegendChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  catchLegendText: {
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.text,
+    paddingRight: 2,
+  },
+  catchHoleEmoji: {
+    fontSize: 32,
+  },
+  catchEmptyHole: {
+    width: 14,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D5DCEB',
+  },
+  catchStartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Pastel.coral,
+    borderRadius: 999,
+    paddingVertical: 13,
+  },
+  catchStartText: {
+    fontFamily: BodyFontBold,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Pastel.pureWhite,
+    paddingRight: 2,
   },
 });

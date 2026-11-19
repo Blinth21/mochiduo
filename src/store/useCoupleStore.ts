@@ -4,11 +4,13 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
 import {
+  type CatchSlotState,
   MOCHI_ACCESSORIES,
   MOCHI_SKINS,
   STARTER_MOCHI_COINS,
   checkTttWinner,
   pickBotTttMove,
+  pickRandomCatchSlot,
   pickRandomSuitChoice,
   resolveSuitWinner,
 } from '@/constants/mochiduoPlay';
@@ -49,6 +51,7 @@ import type {
   PartnerId,
   PartnerProfile,
   PlayBroadcastEvent,
+  PlaySectionTab,
   SuitChoice,
   SuitMatchState,
   SuitMode,
@@ -288,6 +291,41 @@ function createInitialTttGame(starter: PartnerId = 'p1'): TttMatchState {
   };
 }
 
+export const CATCH_DURATION_SEC = 25;
+
+export interface CatchMatchState {
+  phase: 'idle' | 'playing' | 'done';
+  timeLeft: number;
+  score: number;
+  lastCoins: number;
+  slots: (CatchSlotState | null)[];
+  playerId: PartnerId;
+}
+
+function createCatchBatch(): (CatchSlotState | null)[] {
+  const next: (CatchSlotState | null)[] = Array(9).fill(null);
+  const count = Math.random() < 0.48 ? 2 : 1;
+  const picked = new Set<number>();
+  while (picked.size < count) {
+    picked.add(Math.floor(Math.random() * 9));
+  }
+  picked.forEach((idx) => {
+    next[idx] = pickRandomCatchSlot();
+  });
+  return next;
+}
+
+function createInitialCatchGame(): CatchMatchState {
+  return {
+    phase: 'idle',
+    timeLeft: CATCH_DURATION_SEC,
+    score: 0,
+    lastCoins: 0,
+    slots: Array(9).fill(null) as (CatchSlotState | null)[],
+    playerId: 'p1',
+  };
+}
+
 interface CoupleState {
   activePartnerId: PartnerId;
   anniversaryDate: string; // YYYY-MM-DD
@@ -304,9 +342,11 @@ interface CoupleState {
   chatMessages: ChatMessage[];
 
   // Mini-games live/local board state (not persisted)
-  playSectionTab: 'suit' | 'ttt' | 'shop';
+  playSectionTab: PlaySectionTab;
+  bestCatchScore: number;
   suitGame: SuitMatchState;
   tttGame: TttMatchState;
+  catchGame: CatchMatchState;
 
   // Realtime presence & typing (not persisted)
   partnerTyping: Record<PartnerId, boolean>;
@@ -326,7 +366,7 @@ interface CoupleState {
 
   // Actions
   setActivePartner: (id: PartnerId) => void;
-  setPlaySectionTab: (tab: 'suit' | 'ttt' | 'shop') => void;
+  setPlaySectionTab: (tab: PlaySectionTab) => void;
   updateCoupleSettings: (payload: {
     coupleTitle: string;
     anniversaryDate: string;
@@ -343,6 +383,16 @@ interface CoupleState {
   // Engagement, Streak & Shop actions
   claimDailyCheckIn: (partnerId: PartnerId) => { claimed: boolean; reward: number };
   claimDailyQuestBonus: (partnerId: PartnerId) => { claimed: boolean; reward: number };
+  recordMiniGameReward: (
+    partnerId: PartnerId,
+    coins: number,
+    catchScore?: number
+  ) => void;
+  startCatchGame: () => void;
+  stopCatchGame: () => void;
+  spawnCatchSlots: () => void;
+  tapCatchSlot: (index: number) => 'positive' | 'negative' | 'empty';
+  tickCatchSecond: () => boolean;
   buyShopItem: (input: {
     buyerId: PartnerId;
     recipientId: PartnerId;
@@ -458,16 +508,18 @@ export const useCoupleStore = create<CoupleState>()(
   persist(
     (set, get) => ({
       activePartnerId: 'p1',
-      anniversaryDate: '2024-02-14',
-      coupleTitle: 'Mochi & Boba',
-      hugCount: 128,
-      lastHugFrom: 'p2',
-      lastHugAt: now - 1000 * 60 * 18,
+      anniversaryDate: getLocalDateKey(),
+      coupleTitle: 'MochiDuo',
+      hugCount: 0,
+      lastHugFrom: null,
+      lastHugAt: null,
       liveWatchEnabled: true,
 
       playSectionTab: 'suit',
+      bestCatchScore: 0,
       suitGame: createInitialSuitGame(),
       tttGame: createInitialTttGame(),
+      catchGame: createInitialCatchGame(),
 
       partnerTyping: { p1: false, p2: false },
       onlinePartners: { p1: false, p2: false },
@@ -481,7 +533,7 @@ export const useCoupleStore = create<CoupleState>()(
       syncConfig: {
         supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
         supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-        roomCode: 'MOCHI-2026',
+        roomCode: '',
         enabled: false,
       },
       syncStatus: 'offline',
@@ -490,13 +542,13 @@ export const useCoupleStore = create<CoupleState>()(
       partners: {
         p1: {
           id: 'p1',
-          name: 'Raka',
+          name: 'Partner 1',
           nickname: 'Mochi',
           mochiColor: '#FFEAD9',
           auraColor: '#FF5C7A',
-          mood: 'in_love',
-          statusText: 'Lagi kangen pengen makan es krim bareng.',
-          updatedAt: now - 1000 * 60 * 12,
+          mood: 'happy',
+          statusText: 'Belum menulis kabar',
+          updatedAt: now,
           coins: STARTER_MOCHI_COINS,
           skinId: 'peach',
           accessoryId: 'none',
@@ -508,13 +560,13 @@ export const useCoupleStore = create<CoupleState>()(
         },
         p2: {
           id: 'p2',
-          name: 'Naya',
+          name: 'Partner 2',
           nickname: 'Boba',
           mochiColor: '#D8F0E3',
           auraColor: '#22A87A',
           mood: 'happy',
-          statusText: 'Baru beres kerja, siap peluk kamu.',
-          updatedAt: now - 1000 * 60 * 25,
+          statusText: 'Belum menulis kabar',
+          updatedAt: now,
           coins: STARTER_MOCHI_COINS,
           skinId: 'matcha',
           accessoryId: 'none',
@@ -528,186 +580,28 @@ export const useCoupleStore = create<CoupleState>()(
 
       locations: {
         p1: {
-          latitude: -6.2442,
-          longitude: 106.8006,
-          areaName: 'Blok M, Jakarta Selatan',
-          spotTag: 'Ngopi',
-          isSharing: true,
-          accuracyMeters: 18,
-          updatedAt: now - 1000 * 60 * 8,
+          latitude: -6.2088,
+          longitude: 106.8456,
+          areaName: 'Belum membagikan lokasi',
+          isSharing: false,
+          updatedAt: now,
         },
         p2: {
-          latitude: -6.2297,
-          longitude: 106.8165,
-          areaName: 'Senopati, Jakarta Selatan',
-          spotTag: 'Kampus/Kantor',
-          isSharing: true,
-          accuracyMeters: 24,
-          updatedAt: now - 1000 * 60 * 14,
+          latitude: -6.2088,
+          longitude: 106.8456,
+          areaName: 'Belum membagikan lokasi',
+          isSharing: false,
+          updatedAt: now,
         },
       },
 
-      memories: [
-        {
-          id: 'mem-1',
-          title: 'First Date Makan Ramen Hujan-Hujan',
-          story:
-            'Inget banget waktu kita kehujanan nyari tempat makan, terus akhirnya ketawa-ketawa sambil makan ramen panas dan rebutan gyoza terakhir!',
-          date: '2024-02-14',
-          location: 'Blok M, Jakarta',
-          tag: 'food',
-          sticker: '🍜',
-          cardBg: '#FFF7E6',
-          isFavorite: true,
-          createdAt: now - 1000 * 60 * 60 * 24 * 60,
-        },
-        {
-          id: 'mem-2',
-          title: 'Photobox Berdua Pertama Kali',
-          story:
-            'Panik gaya gara-gara timer cepet banget, hasilnya malah pose kocak semua tapi jadi foto favorit di dompet!',
-          date: '2024-05-20',
-          location: 'M Bloc Space',
-          tag: 'date',
-          sticker: '📸',
-          cardBg: '#FFF0F3',
-          isFavorite: true,
-          createdAt: now - 1000 * 60 * 60 * 24 * 40,
-        },
-        {
-          id: 'mem-3',
-          title: 'Road Trip Subuh ke Bandung',
-          story:
-            'Berangkat jam 5 pagi cuma buat nyobain kopi susu sama pisang keju hangat. Playlist sepanjang jalan nyanyi terus!',
-          date: '2024-09-08',
-          location: 'Dago Atas, Bandung',
-          tag: 'trip',
-          sticker: '🛵',
-          cardBg: '#EEF5FF',
-          isFavorite: false,
-          createdAt: now - 1000 * 60 * 60 * 24 * 15,
-        },
-        {
-          id: 'mem-4',
-          title: 'Momen Random Beli Boneka Bebek',
-          story:
-            'Niatnya cuma beli air mineral, pulangnya malah bawa boneka bebek gemoy buat nemenin tidur.',
-          date: '2025-01-11',
-          location: 'Pasar Santa',
-          tag: 'random',
-          sticker: '🐥',
-          cardBg: '#F3F0FF',
-          isFavorite: false,
-          createdAt: now - 1000 * 60 * 60 * 24 * 5,
-        },
-      ],
+      memories: [],
 
-      bucketList: [
-        {
-          id: 'buck-1',
-          title: 'Piknik sore sambil bawa kamera analog',
-          category: 'hangout',
-          targetDate: 'Akhir Pekan Ini',
-          done: false,
-          createdBy: 'p1',
-        },
-        {
-          id: 'buck-2',
-          title: 'Masak tteokbokki & kimbap bareng',
-          category: 'cozy',
-          targetDate: 'Minggu Depan',
-          done: false,
-          createdBy: 'p2',
-        },
-        {
-          id: 'buck-3',
-          title: 'Nonton konser band favorit berdua',
-          category: 'milestone',
-          targetDate: 'Tahun Ini',
-          done: false,
-          createdBy: 'p1',
-        },
-        {
-          id: 'buck-4',
-          title: 'Cobain semua rasa gelato di toko sebelah',
-          category: 'food',
-          done: true,
-          doneAt: now - 1000 * 60 * 60 * 24 * 10,
-          createdBy: 'p2',
-        },
-        {
-          id: 'buck-5',
-          title: 'Bikin scrapbook mini perjalanan 1 tahun',
-          category: 'cozy',
-          done: true,
-          doneAt: now - 1000 * 60 * 60 * 24 * 25,
-          createdBy: 'p1',
-        },
-      ],
+      bucketList: [],
 
-      loveNotes: [
-        {
-          id: 'note-1',
-          authorId: 'p2',
-          message:
-            'Makasih ya udah selalu sabar dengerin ceritaku tiap malam. Jangan lupa minum air putih hari ini, Mochi! 💕',
-          sticker: '🍓',
-          colorId: 'pink',
-          pinned: true,
-          reaction: '🥰',
-          createdAt: now - 1000 * 60 * 45,
-        },
-        {
-          id: 'note-2',
-          authorId: 'p1',
-          message:
-            'Nanti pulang kerja aku jemput ya! Aku udah siapin matcha latte kesukaanmu di tas 🍵✨',
-          sticker: '🍵',
-          colorId: 'mint',
-          pinned: false,
-          reaction: '🫂',
-          createdAt: now - 1000 * 60 * 60 * 4,
-        },
-        {
-          id: 'note-3',
-          authorId: 'p2',
-          message:
-            'Semangat ngerjain tugasnya hari ini! Kalau capek, buka app ini terus pencet tombol peluk ya 🥺',
-          sticker: '🌟',
-          colorId: 'lemon',
-          pinned: false,
-          reaction: '❤️',
-          createdAt: now - 1000 * 60 * 60 * 20,
-        },
-      ],
+      loveNotes: [],
 
-      chatMessages: [
-        {
-          id: 'msg-1',
-          senderId: 'p2',
-          text: 'Sayang udah makan siang belum? 🍱💕',
-          status: 'read',
-          createdAt: now - 1000 * 60 * 40,
-        },
-        {
-          id: 'msg-2',
-          senderId: 'p1',
-          text: 'Udah barusan! Nanti sore jadi kan kita jalan?',
-          replyToId: 'msg-1',
-          replyToSender: 'p2',
-          replyToPreview: 'Sayang udah makan siang belum? 🍱💕',
-          reaction: '🥰',
-          status: 'read',
-          createdAt: now - 1000 * 60 * 35,
-        },
-        {
-          id: 'msg-3',
-          senderId: 'p2',
-          text: 'Jadi dong! Aku udah siapin kamera buat foto berdua 📸✨',
-          status: 'delivered',
-          createdAt: now - 1000 * 60 * 10,
-        },
-      ],
+      chatMessages: [],
 
       setActivePartner: (id) =>
         set((state) => ({
@@ -885,6 +779,118 @@ export const useCoupleStore = create<CoupleState>()(
           },
         }));
         return { claimed: true, reward: result.earned };
+      },
+
+      recordMiniGameReward: (partnerId, coins, catchScore) =>
+        set((state) => {
+          const safeCoins = Math.max(0, Math.round(coins));
+          const { nextProfile } = applyProfileEngagement(state.partners[partnerId], {
+            missionId: 'game',
+            missionCoins: 15,
+            alwaysCoins: safeCoins,
+          });
+          const col = partnerId === 'p1' ? 'p1_profile' : 'p2_profile';
+          void pushRoomFields(state.syncConfig, { [col]: nextProfile });
+          return {
+            bestCatchScore:
+              typeof catchScore === 'number'
+                ? Math.max(state.bestCatchScore, catchScore)
+                : state.bestCatchScore,
+            partners: {
+              ...state.partners,
+              [partnerId]: nextProfile,
+            },
+          };
+        }),
+
+      startCatchGame: () =>
+        set((state) => ({
+          catchGame: {
+            phase: 'playing',
+            timeLeft: CATCH_DURATION_SEC,
+            score: 0,
+            lastCoins: 0,
+            slots: createCatchBatch(),
+            playerId: state.activePartnerId,
+          },
+        })),
+
+      stopCatchGame: () =>
+        set((state) => ({
+          catchGame: {
+            ...state.catchGame,
+            phase: 'idle',
+            slots: Array(9).fill(null) as (CatchSlotState | null)[],
+          },
+        })),
+
+      spawnCatchSlots: () =>
+        set((state) =>
+          state.catchGame.phase === 'playing'
+            ? {
+                catchGame: {
+                  ...state.catchGame,
+                  slots: createCatchBatch(),
+                },
+              }
+            : {}
+        ),
+
+      tapCatchSlot: (index) => {
+        const prev = get();
+        if (prev.catchGame.phase !== 'playing') return 'empty';
+        const slot = prev.catchGame.slots[index];
+        if (!slot) return 'empty';
+        const nextScore = Math.max(0, prev.catchGame.score + slot.points);
+        const nextSlots = prev.catchGame.slots.map((s, i) => (i === index ? null : s));
+        set({
+          catchGame: {
+            ...prev.catchGame,
+            score: nextScore,
+            slots: nextSlots,
+          },
+        });
+        return slot.kind === 'bomb' ? 'negative' : 'positive';
+      },
+
+      tickCatchSecond: () => {
+        const prev = get();
+        const g = prev.catchGame;
+        if (g.phase !== 'playing') return false;
+        const nextTime = g.timeLeft - 1;
+        if (nextTime > 0) {
+          set({
+            catchGame: {
+              ...g,
+              timeLeft: nextTime,
+            },
+          });
+          return false;
+        }
+        const finalScore = g.score;
+        const coins = Math.min(35, Math.max(8, finalScore + 8));
+        const { nextProfile } = applyProfileEngagement(prev.partners[g.playerId], {
+          missionId: 'game',
+          missionCoins: 15,
+          alwaysCoins: coins,
+        });
+        const col = g.playerId === 'p1' ? 'p1_profile' : 'p2_profile';
+        void pushRoomFields(prev.syncConfig, { [col]: nextProfile });
+        set({
+          bestCatchScore: Math.max(prev.bestCatchScore, finalScore),
+          catchGame: {
+            ...g,
+            phase: 'done',
+            timeLeft: 0,
+            lastCoins: coins,
+            slots: Array(9).fill(null) as (CatchSlotState | null)[],
+          },
+          partners: {
+            ...prev.partners,
+            [g.playerId]: nextProfile,
+          },
+        });
+        return true;
       },
 
       buyShopItem: ({ buyerId, recipientId, kind, itemId }) => {
@@ -2143,6 +2149,7 @@ export const useCoupleStore = create<CoupleState>()(
         bucketList: state.bucketList,
         loveNotes: state.loveNotes,
         chatMessages: state.chatMessages.slice(-150),
+        bestCatchScore: state.bestCatchScore,
         notifPrefs: state.notifPrefs,
         notifications: state.notifications.slice(0, 20),
         lastAnnivNotifiedKey: state.lastAnnivNotifiedKey,

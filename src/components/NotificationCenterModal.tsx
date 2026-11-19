@@ -158,9 +158,11 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
                   onClose();
                   if (n.route) {
                     if (n.route.startsWith('/play')) {
-                      const match = n.route.match(/tab=(suit|ttt|shop)/);
+                      const match = n.route.match(/tab=(suit|ttt|memory|catch|shop)/);
                       if (match) {
-                        setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'shop');
+                        setPlaySectionTab(
+                          match[1] as 'suit' | 'ttt' | 'memory' | 'catch' | 'shop'
+                        );
                       }
                       router.push('/play');
                     } else {

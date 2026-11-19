@@ -35,9 +35,11 @@ export const NotificationToast = React.memo(function NotificationToast() {
           dismissToast();
           if (targetRoute) {
             if (targetRoute.startsWith('/play')) {
-              const match = targetRoute.match(/tab=(suit|ttt|shop)/);
+              const match = targetRoute.match(/tab=(suit|ttt|memory|catch|shop)/);
               if (match) {
-                setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'shop');
+                setPlaySectionTab(
+                  match[1] as 'suit' | 'ttt' | 'memory' | 'catch' | 'shop'
+                );
               }
               router.push('/play');
             } else {

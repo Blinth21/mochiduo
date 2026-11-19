@@ -7,7 +7,7 @@ import type {
 } from '@/types/couple';
 import { getLocalDateKey, parseLocalDate, shiftDateKey } from '@/utils/dateCalc';
 
-export const STARTER_MOCHI_COINS = 120;
+export const STARTER_MOCHI_COINS = 0;
 
 export interface MochiSkinSpec {
   id: MochiSkinId;
@@ -484,3 +484,47 @@ export function pickBotTttMove(board: TttCell[], botId: PartnerId): number {
 
   return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
 }
+
+export const MEMORY_PAIR_EMOJIS = ['🍓', '🧋', '🐱', '🎀', '👑', '💕'] as const;
+
+export interface MemoryCardItem {
+  uid: string;
+  pairId: string;
+  emoji: string;
+  matchedBy?: PartnerId;
+}
+
+export function createShuffledMemoryDeck(): MemoryCardItem[] {
+  const doubled: MemoryCardItem[] = MEMORY_PAIR_EMOJIS.flatMap((emoji, idx) => [
+    { uid: `mem-${idx}-a`, pairId: emoji, emoji },
+    { uid: `mem-${idx}-b`, pairId: emoji, emoji },
+  ]);
+  for (let i = doubled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [doubled[i], doubled[j]] = [doubled[j], doubled[i]];
+  }
+  return doubled;
+}
+
+export type CatchItemKind = 'mochi' | 'crown' | 'bomb';
+
+export interface CatchSlotState {
+  kind: CatchItemKind;
+  emoji: string;
+  points: number;
+}
+
+const CATCH_MOCHI_EMOJIS = ['🍑', '🍵', '🍓', '🍠'] as const;
+
+export function pickRandomCatchSlot(): CatchSlotState {
+  const roll = Math.random();
+  if (roll < 0.18) {
+    return { kind: 'crown', emoji: '👑', points: 3 };
+  }
+  if (roll < 0.36) {
+    return { kind: 'bomb', emoji: '🌶️', points: -2 };
+  }
+  const emoji = CATCH_MOCHI_EMOJIS[Math.floor(Math.random() * CATCH_MOCHI_EMOJIS.length)];
+  return { kind: 'mochi', emoji, points: 1 };
+}
+
