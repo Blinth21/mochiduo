@@ -9,7 +9,6 @@ import {
   Cloud,
   Coins,
   Flame,
-  Gamepad2,
   Heart,
   ImagePlus,
   MapPin,
@@ -83,6 +82,7 @@ export default function HomeScreen() {
 
   const activePartnerId = useCoupleStore((s) => s.activePartnerId);
   const setActivePartner = useCoupleStore((s) => s.setActivePartner);
+  const setPlaySectionTab = useCoupleStore((s) => s.setPlaySectionTab);
   const p1 = useCoupleStore((s) => s.partners.p1);
   const p2 = useCoupleStore((s) => s.partners.p2);
   const loc1 = useCoupleStore((s) => s.locations.p1);
@@ -106,6 +106,45 @@ export default function HomeScreen() {
   const claimDailyQuestBonus = useCoupleStore((s) => s.claimDailyQuestBonus);
   const pushFeatureNotification = useCoupleStore((s) => s.pushFeatureNotification);
 
+  const openPlayTab = useCallback(
+    (tab: 'suit' | 'ttt' | 'qa' | 'shop') => {
+      triggerMediumHaptic();
+      setPlaySectionTab(tab);
+      router.push('/play');
+    },
+    [router, setPlaySectionTab]
+  );
+
+  const handleCheckIn = useCallback(() => {
+    triggerSuccessHaptic();
+    const res = claimDailyCheckIn(activePartnerId);
+    if (res.claimed) {
+      pushFeatureNotification({
+        category: 'play',
+        emoji: '🔥',
+        title: 'Absen Harian Berhasil!',
+        body: `Streak bertambah & kamu dapat +${res.reward} Mochi Koin 🪙`,
+        route: '/play?tab=qa',
+        systemAlert: false,
+      });
+    }
+  }, [activePartnerId, claimDailyCheckIn, pushFeatureNotification]);
+
+  const handleClaimBonus = useCallback(() => {
+    triggerSuccessHaptic();
+    const res = claimDailyQuestBonus(activePartnerId);
+    if (res.claimed) {
+      pushFeatureNotification({
+        category: 'play',
+        emoji: '🎉',
+        title: 'Bonus 3 Misi Harian Terklaim!',
+        body: `Mantap! Kamu dapat peti +${res.reward} Mochi Koin 🪙`,
+        route: '/play?tab=shop',
+        systemAlert: false,
+      });
+    }
+  }, [activePartnerId, claimDailyQuestBonus, pushFeatureNotification]);
+
   const activePartner = activePartnerId === 'p1' ? p1 : p2;
   const partnerOther = activePartnerId === 'p1' ? p2 : p1;
   const todayKey = getLocalDateKey();
@@ -118,6 +157,10 @@ export default function HomeScreen() {
     () => getDailyMissionSummary(activePartner, todayKey),
     [activePartner, todayKey]
   );
+  const doneMissionsCount =
+    (missionSummary.m1CheckIn ? 1 : 0) +
+    (missionSummary.m2Interact ? 1 : 0) +
+    (missionSummary.m3PlayOrQa ? 1 : 0);
   const todayQuestion = useMemo(() => getDailyQuestion(todayKey), [todayKey]);
 
   const partnerLoc = activePartnerId === 'p1' ? loc2 : loc1;
@@ -350,6 +393,78 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* 0. Instant Above-the-Fold Quick Play & Streak Strip */}
+          <View style={[styles.quickDockCard, SoftShadowSm]}>
+            <View style={styles.quickDockTopRow}>
+              <View style={styles.quickBadgeRow}>
+                <View style={styles.streakMiniPill}>
+                  <Flame size={13} color={Pastel.peach} />
+                  <Text style={styles.streakMiniText} maxFontSizeMultiplier={1.15}>
+                    {streakInfo.streak} Hari
+                  </Text>
+                </View>
+
+                <BouncyPressable
+                  onPress={() => openPlayTab('shop')}
+                  style={styles.coinsMiniPill}>
+                  <Coins size={13} color={Pastel.honeyDark} />
+                  <Text style={styles.coinsMiniText} maxFontSizeMultiplier={1.15}>
+                    {myCoins} Koin
+                  </Text>
+                </BouncyPressable>
+              </View>
+
+              {!missionSummary.m1CheckIn ? (
+                <BouncyPressable
+                  onPress={handleCheckIn}
+                  style={styles.quickAbsenBtn}>
+                  <Text style={styles.quickAbsenText} maxFontSizeMultiplier={1.15}>
+                    +20 Absen 🔥
+                  </Text>
+                </BouncyPressable>
+              ) : missionSummary.allComplete && !missionSummary.bonusClaimed ? (
+                <BouncyPressable
+                  onPress={handleClaimBonus}
+                  style={[styles.quickAbsenBtn, { backgroundColor: Pastel.matcha }]}>
+                  <Text style={styles.quickAbsenText} maxFontSizeMultiplier={1.15}>
+                    +35 Bonus 🎉
+                  </Text>
+                </BouncyPressable>
+              ) : (
+                <View style={styles.quickMissionDonePill}>
+                  <Check size={12} color={Pastel.matcha} />
+                  <Text style={styles.quickMissionDoneText} maxFontSizeMultiplier={1.15}>
+                    Misi {doneMissionsCount}/3
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.quickPlayGrid}>
+              {([
+                { id: 'suit', emoji: '✌️', label: 'Suit', bg: Pastel.coralSoft, fg: Pastel.coralDark },
+                { id: 'ttt', emoji: '🎮', label: 'XOXO', bg: Pastel.taroSoft, fg: Pastel.taro },
+                { id: 'qa', emoji: '❓', label: 'Q&A', bg: Pastel.honeySoft, fg: Pastel.honeyDark },
+                { id: 'shop', emoji: '🎨', label: 'Skin', bg: Pastel.matchaSoft, fg: Pastel.matcha },
+              ] as const).map((item) => (
+                <BouncyPressable
+                  key={item.id}
+                  onPress={() => openPlayTab(item.id)}
+                  style={[styles.quickPlayPill, { backgroundColor: item.bg }]}>
+                  <Text style={styles.quickPlayEmoji}>{item.emoji}</Text>
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.82}
+                    maxFontSizeMultiplier={1.15}
+                    style={[styles.quickPlayLabel, { color: item.fg }]}>
+                    {item.label}
+                  </Text>
+                </BouncyPressable>
+              ))}
+            </View>
+          </View>
+
           {/* 1. Cheerful Coral Anniversary Hero */}
           <AnniversaryBanner onPressEdit={openEditModal} />
 
@@ -398,7 +513,7 @@ export default function HomeScreen() {
               </View>
 
               <BouncyPressable
-                onPress={() => router.push('/play?tab=shop')}
+                onPress={() => openPlayTab('shop')}
                 style={styles.mascotStage}>
                 <MochiMascot
                   bodyColor={p1.mochiColor}
@@ -470,7 +585,7 @@ export default function HomeScreen() {
               </View>
 
               <BouncyPressable
-                onPress={() => router.push('/play?tab=shop')}
+                onPress={() => openPlayTab('shop')}
                 style={styles.mascotStage}>
                 <MochiMascot
                   bodyColor={p2.mochiColor}
@@ -536,25 +651,27 @@ export default function HomeScreen() {
             ) : null}
           </View>
 
-          {/* 3B. Streak Berdua, Mochi Coins & 3 Misi Harian Bento */}
-          <View style={[styles.engagementCard, SoftShadow]}>
-            <View style={styles.engagementTopRow}>
-              <View style={styles.streakBadge}>
-                <Flame size={15} color={Pastel.peach} />
-                <Text style={styles.streakBadgeText} maxFontSizeMultiplier={1.15}>
-                  {streakInfo.streak} Hari Streak
+          {/* 3B. Compact Q&A Hari Ini & Misi Berdua Bento */}
+          <BouncyPressable
+            onPress={() => openPlayTab('qa')}
+            style={[styles.qaSummaryCard, SoftShadow]}>
+            <View style={styles.qaSummaryTopRow}>
+              <View style={styles.qaSummaryTagPill}>
+                <Text style={styles.qaSummaryEmoji}>{todayQuestion.emoji}</Text>
+                <Text style={styles.qaSummaryTagText} maxFontSizeMultiplier={1.15}>
+                  Q&A Hari Ini
                 </Text>
               </View>
-
-              <BouncyPressable
-                onPress={() => router.push('/play?tab=shop')}
-                style={styles.coinsBadge}>
-                <Coins size={14} color={Pastel.honeyDark} />
-                <Text style={styles.coinsBadgeText} maxFontSizeMultiplier={1.15}>
-                  {myCoins} Koin
-                </Text>
-              </BouncyPressable>
+              <Text style={styles.qaSummaryActionText} maxFontSizeMultiplier={1.15}>
+                {activePartner.qaResponses?.[todayKey]
+                  ? 'Lihat Cerita →'
+                  : 'Jawab +25 🪙 →'}
+              </Text>
             </View>
+
+            <Text style={styles.qaSummaryPrompt} numberOfLines={2}>
+              {todayQuestion.prompt}
+            </Text>
 
             <Text style={styles.streakHint}>{streakInfo.statusText}</Text>
 
@@ -589,94 +706,7 @@ export default function HomeScreen() {
                 </View>
               ))}
             </View>
-
-            {!missionSummary.m1CheckIn ? (
-              <BouncyPressable
-                onPress={() => {
-                  triggerSuccessHaptic();
-                  const res = claimDailyCheckIn(activePartnerId);
-                  if (res.claimed) {
-                    pushFeatureNotification({
-                      category: 'play',
-                      emoji: '🔥',
-                      title: 'Absen Harian Berhasil!',
-                      body: `Streak bertambah & kamu dapat +${res.reward} Mochi Koin 🪙`,
-                      route: '/play',
-                      systemAlert: false,
-                    });
-                  }
-                }}
-                style={styles.claimBtn}>
-                <Text style={styles.claimBtnText} maxFontSizeMultiplier={1.15}>
-                  Absen Harian Sekarang (+20 🪙)
-                </Text>
-              </BouncyPressable>
-            ) : missionSummary.allComplete && !missionSummary.bonusClaimed ? (
-              <BouncyPressable
-                onPress={() => {
-                  triggerSuccessHaptic();
-                  const res = claimDailyQuestBonus(activePartnerId);
-                  if (res.claimed) {
-                    pushFeatureNotification({
-                      category: 'play',
-                      emoji: '🎉',
-                      title: 'Bonus 3 Misi Harian Terklaim!',
-                      body: `Mantap! Kamu dapat peti +${res.reward} Mochi Koin 🪙`,
-                      route: '/play?tab=shop',
-                      systemAlert: false,
-                    });
-                  }
-                }}
-                style={[styles.claimBtn, { backgroundColor: Pastel.matcha }]}>
-                <Text style={styles.claimBtnText} maxFontSizeMultiplier={1.15}>
-                  Klaim Bonus 3 Misi Selesai (+35 🪙)
-                </Text>
-              </BouncyPressable>
-            ) : null}
-          </View>
-
-          {/* 3C. 2-Col Daily Q&A + MochiPlay Toko & Mini-Game */}
-          <View style={styles.playGrid}>
-            <BouncyPressable
-              onPress={() => router.push('/play?tab=qa')}
-              style={[styles.playBento, SoftShadow, { backgroundColor: Pastel.taroSoft }]}>
-              <View style={styles.playBentoTop}>
-                <Text style={styles.playBentoEmoji}>{todayQuestion.emoji}</Text>
-                <View style={styles.playTagPill}>
-                  <Text style={[styles.playTagText, { color: Pastel.taro }]} maxFontSizeMultiplier={1.1}>
-                    Q&A Harian
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.playBentoTitle} numberOfLines={2}>
-                {todayQuestion.prompt}
-              </Text>
-              <Text style={styles.playBentoSub} numberOfLines={1}>
-                {activePartner.qaResponses?.[todayKey]
-                  ? 'Sudah dijawab · Lihat'
-                  : 'Jawab buat +25 🪙 →'}
-              </Text>
-            </BouncyPressable>
-
-            <BouncyPressable
-              onPress={() => router.push('/play?tab=shop')}
-              style={[styles.playBento, SoftShadow, { backgroundColor: Pastel.honeySoft }]}>
-              <View style={styles.playBentoTop}>
-                <Gamepad2 size={19} color={Pastel.honeyDark} />
-                <View style={styles.playTagPill}>
-                  <Text style={[styles.playTagText, { color: Pastel.honeyDark }]} maxFontSizeMultiplier={1.1}>
-                    MochiPlay
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.playBentoTitle} numberOfLines={2}>
-                Toko Skin & Mini-Game Berdua
-              </Text>
-              <Text style={styles.playBentoSub} numberOfLines={1}>
-                Suit Taruhan · XOXO →
-              </Text>
-            </BouncyPressable>
-          </View>
+          </BouncyPressable>
 
           {/* 4. Clean Borderless Location Bento Strip */}
           <BouncyPressable
@@ -1226,54 +1256,157 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: Pastel.textMuted,
   },
-  engagementCard: {
+  quickDockCard: {
     backgroundColor: Pastel.bgElevated,
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: 22,
+    padding: 12,
     gap: 10,
   },
-  engagementTopRow: {
+  quickDockTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
   },
-  streakBadge: {
+  quickBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  streakMiniPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: Pastel.peachSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
   },
-  streakBadgeText: {
+  streakMiniText: {
     fontFamily: BodyFontBold,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     color: Pastel.peach,
     paddingRight: 2,
   },
-  coinsBadge: {
+  coinsMiniPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: Pastel.honeySoft,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
   },
-  coinsBadgeText: {
+  coinsMiniText: {
     fontFamily: BodyFontBold,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     color: Pastel.honeyDark,
     paddingRight: 2,
   },
+  quickAbsenBtn: {
+    backgroundColor: Pastel.coral,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  quickAbsenText: {
+    fontFamily: BodyFontBold,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.pureWhite,
+    paddingRight: 2,
+  },
+  quickMissionDonePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Pastel.matchaSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  quickMissionDoneText: {
+    fontFamily: BodyFontBold,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.matcha,
+    paddingRight: 2,
+  },
+  quickPlayGrid: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  quickPlayPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+  },
+  quickPlayEmoji: {
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  quickPlayLabel: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 17,
+    paddingRight: 2,
+  },
+  qaSummaryCard: {
+    backgroundColor: Pastel.taroSoft,
+    borderRadius: 24,
+    padding: 16,
+    gap: 9,
+  },
+  qaSummaryTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  qaSummaryTagPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  qaSummaryEmoji: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  qaSummaryTagText: {
+    fontFamily: BodyFontBold,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.taro,
+    paddingRight: 2,
+  },
+  qaSummaryActionText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 17,
+    color: Pastel.taro,
+    paddingRight: 2,
+  },
+  qaSummaryPrompt: {
+    fontFamily: BodyFontBold,
+    fontSize: 14.5,
+    lineHeight: 21,
+    color: Pastel.text,
+  },
   streakHint: {
     fontFamily: RoundedFont,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   missionsRow: {
@@ -1286,7 +1419,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: Pastel.bgMuted,
+    backgroundColor: 'rgba(255,255,255,0.72)',
     paddingHorizontal: 8,
     paddingVertical: 7,
     borderRadius: 999,
@@ -1304,66 +1437,6 @@ const styles = StyleSheet.create({
   missionPillTextDone: {
     fontFamily: BodyFontBold,
     color: Pastel.matcha,
-  },
-  claimBtn: {
-    backgroundColor: Pastel.coral,
-    borderRadius: 999,
-    paddingVertical: 11,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  claimBtnText: {
-    fontFamily: BodyFontBold,
-    fontSize: 13.5,
-    lineHeight: 19,
-    color: Pastel.pureWhite,
-    paddingRight: 2,
-  },
-  playGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  playBento: {
-    flex: 1,
-    borderRadius: 24,
-    padding: 15,
-    gap: 8,
-    justifyContent: 'space-between',
-  },
-  playBentoTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-  },
-  playBentoEmoji: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  playTagPill: {
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  playTagText: {
-    fontFamily: BodyFontBold,
-    fontSize: 10.5,
-    lineHeight: 15,
-    paddingRight: 2,
-  },
-  playBentoTitle: {
-    fontFamily: BodyFontBold,
-    fontSize: 13.5,
-    lineHeight: 19,
-    color: Pastel.text,
-  },
-  playBentoSub: {
-    fontFamily: BodyFontSemi,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: Pastel.textMuted,
   },
   locationStrip: {
     flexDirection: 'row',

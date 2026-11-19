@@ -13,6 +13,7 @@ export const NotificationToast = React.memo(function NotificationToast() {
   const insets = useSafeAreaInsets();
   const activeToast = useCoupleStore((s) => s.activeToast);
   const dismissToast = useCoupleStore((s) => s.dismissToast);
+  const setPlaySectionTab = useCoupleStore((s) => s.setPlaySectionTab);
 
   useEffect(() => {
     if (!activeToast) return;
@@ -33,7 +34,15 @@ export const NotificationToast = React.memo(function NotificationToast() {
           const targetRoute = activeToast.route;
           dismissToast();
           if (targetRoute) {
-            router.push(targetRoute as any);
+            if (targetRoute.startsWith('/play')) {
+              const match = targetRoute.match(/tab=(suit|ttt|qa|shop)/);
+              if (match) {
+                setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'qa' | 'shop');
+              }
+              router.push('/play');
+            } else {
+              router.push(targetRoute as any);
+            }
           }
         }}
         style={styles.toast}>

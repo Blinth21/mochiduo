@@ -49,6 +49,7 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
   const markAllNotificationsRead = useCoupleStore((s) => s.markAllNotificationsRead);
   const clearNotifications = useCoupleStore((s) => s.clearNotifications);
   const pushFeatureNotification = useCoupleStore((s) => s.pushFeatureNotification);
+  const setPlaySectionTab = useCoupleStore((s) => s.setPlaySectionTab);
 
   const handleTestNotification = useCallback(async () => {
     const granted = await ensureNotificationPermissions();
@@ -155,7 +156,17 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
                 key={n.id}
                 onPress={() => {
                   onClose();
-                  if (n.route) router.push(n.route as any);
+                  if (n.route) {
+                    if (n.route.startsWith('/play')) {
+                      const match = n.route.match(/tab=(suit|ttt|qa|shop)/);
+                      if (match) {
+                        setPlaySectionTab(match[1] as 'suit' | 'ttt' | 'qa' | 'shop');
+                      }
+                      router.push('/play');
+                    } else {
+                      router.push(n.route as any);
+                    }
+                  }
                 }}
                 style={[styles.historyItem, !n.read && styles.historyItemUnread]}>
                 <Text style={styles.historyEmoji}>{n.emoji}</Text>

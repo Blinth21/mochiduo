@@ -367,12 +367,12 @@ export default function RootLayout() {
             freezeOnBlur: true,
           }}>
           <Tabs.Screen name="index" options={{ title: 'Beranda' }} />
+          <Tabs.Screen name="play" options={{ title: 'Main' }} />
           <Tabs.Screen name="chat" options={{ title: 'Chat' }} />
           <Tabs.Screen name="memories" options={{ title: 'Kenangan' }} />
           <Tabs.Screen name="lokasi" options={{ title: 'Lokasi' }} />
           <Tabs.Screen name="dates" options={{ title: 'Kencan' }} />
           <Tabs.Screen name="notes" options={{ title: 'Catatan' }} />
-          <Tabs.Screen name="play" options={{ href: null, title: 'MochiPlay' }} />
         </Tabs>
       </SafeAreaProvider>
     </GestureHandlerRootView>

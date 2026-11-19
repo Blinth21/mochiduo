@@ -304,6 +304,7 @@ interface CoupleState {
   chatMessages: ChatMessage[];
 
   // Mini-games live/local board state (not persisted)
+  playSectionTab: 'suit' | 'ttt' | 'qa' | 'shop';
   suitGame: SuitMatchState;
   tttGame: TttMatchState;
 
@@ -325,6 +326,7 @@ interface CoupleState {
 
   // Actions
   setActivePartner: (id: PartnerId) => void;
+  setPlaySectionTab: (tab: 'suit' | 'ttt' | 'qa' | 'shop') => void;
   updateCoupleSettings: (payload: {
     coupleTitle: string;
     anniversaryDate: string;
@@ -469,6 +471,7 @@ export const useCoupleStore = create<CoupleState>()(
       lastHugAt: now - 1000 * 60 * 18,
       liveWatchEnabled: true,
 
+      playSectionTab: 'suit',
       suitGame: createInitialSuitGame(),
       tttGame: createInitialTttGame(),
 
@@ -713,6 +716,8 @@ export const useCoupleStore = create<CoupleState>()(
       ],
 
       setActivePartner: (id) => set({ activePartnerId: id }),
+
+      setPlaySectionTab: (tab) => set({ playSectionTab: tab }),
 
       updateCoupleSettings: (payload) => {
         set((state) => {
@@ -1326,7 +1331,7 @@ export const useCoupleStore = create<CoupleState>()(
               emoji: '✌️',
               title: `${partnerName} Tantang Suit Mochi!`,
               body: `Taruhan: ${event.stake || game.stake}. Ayo buka MochiPlay sekarang!`,
-              route: '/play',
+              route: '/play?tab=suit',
             });
           }
 
@@ -1398,7 +1403,7 @@ export const useCoupleStore = create<CoupleState>()(
               emoji: '🎮',
               title: `${partnerName} Mulai Tic-Tac-Toe Mochi!`,
               body: 'Giliran kamu melangkah sekarang!',
-              route: '/play',
+              route: '/play?tab=ttt',
             });
           }
 
@@ -1926,7 +1931,7 @@ export const useCoupleStore = create<CoupleState>()(
             emoji: '🎁',
             title: `Kado ${nextMe.latestGift.emoji} dari ${partnerName}!`,
             body: `${partnerName} menghadiahkan "${nextMe.latestGift.itemName}" buat Mochi-mu!`,
-            route: '/play',
+            route: '/play?tab=shop',
           });
         }
 
@@ -1938,7 +1943,7 @@ export const useCoupleStore = create<CoupleState>()(
             emoji: '❓',
             title: `${partnerName} Jawab Q&A Hari Ini!`,
             body: 'Buka MochiPlay & isi jawabanmu biar jawaban dia kebuka ✨',
-            route: '/play',
+            route: '/play?tab=qa',
           });
         }
 

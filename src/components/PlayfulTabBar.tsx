@@ -1,6 +1,7 @@
 import {
   Calendar,
   Camera,
+  Gamepad2,
   Heart,
   MapPin,
   MessageCircle,
@@ -32,6 +33,7 @@ interface TabBarProps {
 
 const TAB_LABELS: Record<string, string> = {
   index: 'Home',
+  play: 'Main',
   chat: 'Chat',
   memories: 'Album',
   lokasi: 'Lokasi',
@@ -45,24 +47,26 @@ function renderTabIcon(name: string, color: string, focused: boolean) {
     case 'index':
       return (
         <Heart
-          size={19}
+          size={18}
           color={color}
           strokeWidth={strokeWidth}
           fill={focused ? color : 'none'}
         />
       );
+    case 'play':
+      return <Gamepad2 size={18} color={color} strokeWidth={strokeWidth} />;
     case 'chat':
-      return <MessageCircle size={19} color={color} strokeWidth={strokeWidth} />;
+      return <MessageCircle size={18} color={color} strokeWidth={strokeWidth} />;
     case 'memories':
-      return <Camera size={19} color={color} strokeWidth={strokeWidth} />;
+      return <Camera size={18} color={color} strokeWidth={strokeWidth} />;
     case 'lokasi':
-      return <MapPin size={19} color={color} strokeWidth={strokeWidth} />;
+      return <MapPin size={18} color={color} strokeWidth={strokeWidth} />;
     case 'dates':
-      return <Calendar size={19} color={color} strokeWidth={strokeWidth} />;
+      return <Calendar size={18} color={color} strokeWidth={strokeWidth} />;
     case 'notes':
-      return <StickyNote size={19} color={color} strokeWidth={strokeWidth} />;
+      return <StickyNote size={18} color={color} strokeWidth={strokeWidth} />;
     default:
-      return <Heart size={19} color={color} strokeWidth={strokeWidth} />;
+      return <Heart size={18} color={color} strokeWidth={strokeWidth} />;
   }
 }
 
@@ -141,7 +145,7 @@ export const PlayfulTabBar = React.memo(function PlayfulTabBar({
               <Text
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.8}
+                minimumFontScale={0.78}
                 maxFontSizeMultiplier={1.15}
                 style={[
                   styles.tabLabel,
@@ -189,8 +193,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   iconPill: {
-    width: 42,
-    height: 30,
+    width: 38,
+    height: 29,
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
@@ -202,7 +206,7 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -1,
-    right: 2,
+    right: 1,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
@@ -219,9 +223,10 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     width: '100%',
-    fontSize: 10.5,
-    lineHeight: 15,
+    fontSize: 10,
+    lineHeight: 14,
     textAlign: 'center',
+    paddingRight: 1,
   },
   tabLabelFocused: {
     fontFamily: BodyFontBold,

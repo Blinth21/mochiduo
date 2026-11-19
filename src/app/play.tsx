@@ -1,15 +1,17 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import {
   Check,
-  ChevronLeft,
   Coins,
   Flame,
   Gift,
   Lock,
+  MessageCircle,
+  Pencil,
   RefreshCw,
   Send,
   Sparkles,
   Trophy,
+  X,
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -22,6 +24,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
@@ -57,33 +60,23 @@ import type { PartnerId, SuitChoice } from '@/types/couple';
 import { formatIndonesianDate, getLocalDateKey } from '@/utils/dateCalc';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
 
-type PlaySectionTab = 'qa' | 'shop' | 'suit' | 'ttt';
+type PlaySectionTab = 'suit' | 'ttt' | 'qa' | 'shop';
 
 const SECTION_TABS: { id: PlaySectionTab; label: string; emoji: string }[] = [
-  { id: 'qa', label: 'Q&A', emoji: '❓' },
-  { id: 'shop', label: 'Toko Skin', emoji: '🎨' },
   { id: 'suit', label: 'Suit', emoji: '✌️' },
   { id: 'ttt', label: 'XOXO', emoji: '🎮' },
+  { id: 'qa', label: 'Q&A', emoji: '❓' },
+  { id: 'shop', label: 'Toko Skin', emoji: '🎨' },
 ];
 
 export default function MochiPlayScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ tab?: string }>();
 
-  const [manualTab, setManualTab] = useState<PlaySectionTab | null>(null);
-  const [prevParamTab, setPrevParamTab] = useState<string | undefined>(params.tab);
-  if (params.tab !== prevParamTab) {
-    setPrevParamTab(params.tab);
-    setManualTab(null);
-  }
-  const paramTab: PlaySectionTab =
-    params.tab === 'qa' || params.tab === 'shop' || params.tab === 'suit' || params.tab === 'ttt'
-      ? params.tab
-      : 'qa';
-  const activeTab = manualTab ?? paramTab;
-  const setActiveTab = setManualTab;
+  const activeTab = useCoupleStore((s) => s.playSectionTab);
+  const setActiveTab = useCoupleStore((s) => s.setPlaySectionTab);
 
   const [qaDraft, setQaDraft] = useState('');
+  const [editingQa, setEditingQa] = useState(false);
   const [shopTarget, setShopTarget] = useState<'self' | 'gift'>('self');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -111,6 +104,7 @@ export default function MochiPlayScreen() {
   const buyShopItem = useCoupleStore((s) => s.buyShopItem);
   const equipShopItem = useCoupleStore((s) => s.equipShopItem);
   const submitDailyQa = useCoupleStore((s) => s.submitDailyQa);
+  const sendChatMessage = useCoupleStore((s) => s.sendChatMessage);
   const setSuitMode = useCoupleStore((s) => s.setSuitMode);
   const setSuitStake = useCoupleStore((s) => s.setSuitStake);
   const pickSuitChoice = useCoupleStore((s) => s.pickSuitChoice);
@@ -160,6 +154,7 @@ export default function MochiPlayScreen() {
       trimmed
     );
     setQaDraft('');
+    setEditingQa(false);
     Keyboard.dismiss();
     if (coinsEarned > 0) {
       pushFeatureNotification({
@@ -169,10 +164,20 @@ export default function MochiPlayScreen() {
         body: otherTodayQa
           ? `Jawaban ${other.name} sudah terbuka di bawah!`
           : `Nanti kalau ${other.name} menjawab, jawabannya otomatis terbuka.`,
-        route: '/play',
+        route: '/play?tab=qa',
         systemAlert: false,
       });
     }
+  };
+
+  const handleDiscussQaInChat = () => {
+    if (!myTodayQa || !otherTodayQa) return;
+    triggerSuccessHaptic();
+    sendChatMessage({
+      senderId: activePartnerId,
+      text: `${todayQuestion.emoji} Q&A Hari Ini: “${todayQuestion.prompt}”\n• ${me.name}: “${myTodayQa.answer}”\n• ${other.name}: “${otherTodayQa.answer}”\nYuk lanjut ngobrolin ini! 💕`,
+    });
+    router.push('/chat');
   };
 
   // Shop handlers
@@ -643,13 +648,6 @@ export default function MochiPlayScreen() {
         <View style={styles.centerColumn}>
           {/* Header */}
           <View style={styles.headerRow}>
-            <BouncyPressable
-              onPress={() => router.back()}
-              style={[styles.backBtn, SoftShadowSm]}
-              accessibilityLabel="Kembali ke Beranda">
-              <ChevronLeft size={20} color={Pastel.text} />
-            </BouncyPressable>
-
             <View style={{ flex: 1 }}>
               <Text style={styles.screenTitle}>MochiPlay Hub</Text>
               <View style={styles.subMetaRow}>
@@ -663,7 +661,7 @@ export default function MochiPlayScreen() {
             <View style={[styles.coinPill, SoftShadowSm]}>
               <Coins size={15} color={Pastel.honeyDark} />
               <Text style={styles.coinText} maxFontSizeMultiplier={1.15}>
-                {myCoins}
+                {myCoins} Koin
               </Text>
             </View>
           </View>
@@ -687,7 +685,7 @@ export default function MochiPlayScreen() {
                   <Text
                     numberOfLines={1}
                     adjustsFontSizeToFit
-                    minimumFontScale={0.82}
+                    minimumFontScale={0.8}
                     maxFontSizeMultiplier={1.15}
                     style={[
                       styles.segmentLabel,
@@ -702,12 +700,15 @@ export default function MochiPlayScreen() {
 
           {/* TAB 1: DAILY BLIND Q&A */}
           {activeTab === 'qa' ? (
-            <View style={styles.sectionStack}>
+            <Animated.View
+              key="panel-qa"
+              entering={FadeIn.duration(220)}
+              style={styles.sectionStack}>
               <View style={[styles.qaHeroCard, SoftShadow]}>
                 <View style={styles.qaTopRow}>
                   <View style={styles.qaCatPill}>
                     <Text style={styles.qaCatText} maxFontSizeMultiplier={1.15}>
-                      {todayQuestion.emoji} {todayQuestion.category}
+                      {todayQuestion.emoji} Obrolan Hari Ini · {todayQuestion.category}
                     </Text>
                   </View>
                   <Text style={styles.qaDateText}>
@@ -719,20 +720,52 @@ export default function MochiPlayScreen() {
 
                 {/* My answer */}
                 <View style={styles.qaAnswerBox}>
-                  <Text style={styles.qaSideLabel}>
-                    Jawaban {me.name} (Kamu)
-                  </Text>
-                  {myTodayQa ? (
-                    <View style={styles.qaSavedBubble}>
+                  <View style={styles.qaSideHeader}>
+                    <Text style={styles.qaSideLabel}>
+                      Jawaban {me.name} (Kamu)
+                    </Text>
+                    {myTodayQa && !editingQa ? (
+                      <BouncyPressable
+                        onPress={() => {
+                          triggerMediumHaptic();
+                          setQaDraft(myTodayQa.answer);
+                          setEditingQa(true);
+                        }}
+                        style={styles.qaEditPill}>
+                        <Pencil size={11} color={Pastel.coralDark} />
+                        <Text style={styles.qaEditText} maxFontSizeMultiplier={1.15}>
+                          Edit
+                        </Text>
+                      </BouncyPressable>
+                    ) : myTodayQa && editingQa ? (
+                      <BouncyPressable
+                        onPress={() => {
+                          setEditingQa(false);
+                          setQaDraft('');
+                          Keyboard.dismiss();
+                        }}
+                        style={styles.qaCancelPill}>
+                        <X size={11} color={Pastel.textMuted} />
+                        <Text style={styles.qaCancelText} maxFontSizeMultiplier={1.15}>
+                          Batal
+                        </Text>
+                      </BouncyPressable>
+                    ) : null}
+                  </View>
+
+                  {myTodayQa && !editingQa ? (
+                    <Animated.View
+                      entering={FadeInDown.duration(220)}
+                      style={styles.qaSavedBubble}>
                       <Text style={styles.qaSavedText}>“{myTodayQa.answer}”</Text>
-                      <Text style={styles.qaSavedBadge}>✓ Terkirim</Text>
-                    </View>
+                      <Text style={styles.qaSavedBadge}>✓ Tersimpan lembut untuk hari ini</Text>
+                    </Animated.View>
                   ) : (
                     <View style={styles.qaInputRow}>
                       <TextInput
                         value={qaDraft}
                         onChangeText={setQaDraft}
-                        placeholder="Tulis jawaban jujurmu di sini..."
+                        placeholder="Ceritain jawaban jujurmu dengan santai..."
                         placeholderTextColor={Pastel.textSoft}
                         style={styles.qaTextInput}
                         multiline
@@ -750,33 +783,60 @@ export default function MochiPlayScreen() {
                   )}
                 </View>
 
-                {/* Partner answer (Locked until I answer!) */}
+                {/* Partner answer (Silky Soft-Lock until both answer!) */}
                 <View style={styles.qaAnswerBox}>
                   <Text style={styles.qaSideLabel}>Jawaban {other.name}</Text>
 
                   {!otherTodayQa ? (
-                    <View style={styles.qaLockedCard}>
-                      <Sparkles size={16} color={Pastel.textSoft} />
-                      <Text style={styles.qaLockedText}>
-                        {other.name} belum menjawab hari ini. Ajak {other.name} buka MochiPlay ya!
-                      </Text>
+                    <View style={styles.qaSoftLockCard}>
+                      <View style={styles.qaSkeletonBars}>
+                        <View style={styles.qaSkeletonBarLong} />
+                        <View style={styles.qaSkeletonBarShort} />
+                      </View>
+                      <View style={styles.qaSoftLockPill}>
+                        <Sparkles size={13} color={Pastel.textMuted} />
+                        <Text style={styles.qaSoftLockText}>
+                          Menunggu {other.name} menuliskan ceritanya hari ini ✨
+                        </Text>
+                      </View>
                     </View>
                   ) : !myTodayQa ? (
-                    <View style={styles.qaSecretCard}>
-                      <Lock size={16} color={Pastel.taro} />
-                      <Text style={styles.qaSecretText}>
-                        {other.name} sudah menjawab! Kirim jawabanmu dulu di atas buat membukanya 👀
-                      </Text>
+                    <View style={[styles.qaSoftLockCard, { backgroundColor: Pastel.taroSoft }]}>
+                      <View style={styles.qaSkeletonBars}>
+                        <View style={[styles.qaSkeletonBarLong, { backgroundColor: 'rgba(255,255,255,0.68)' }]} />
+                        <View style={[styles.qaSkeletonBarShort, { backgroundColor: 'rgba(255,255,255,0.52)' }]} />
+                      </View>
+                      <View style={[styles.qaSoftLockPill, { backgroundColor: 'rgba(255,255,255,0.78)' }]}>
+                        <Lock size={13} color={Pastel.taro} />
+                        <Text style={[styles.qaSoftLockText, { color: Pastel.taro }]}>
+                          Terkunci lembut sampai kamu ikut menjawab 💭
+                        </Text>
+                      </View>
                     </View>
                   ) : (
-                    <View style={[styles.qaSavedBubble, { backgroundColor: Pastel.matchaSoft }]}>
+                    <Animated.View
+                      entering={FadeInDown.duration(260)}
+                      style={[styles.qaSavedBubble, { backgroundColor: Pastel.matchaSoft }]}>
                       <Text style={styles.qaSavedText}>“{otherTodayQa.answer}”</Text>
                       <Text style={[styles.qaSavedBadge, { color: Pastel.matcha }]}>
-                        Terbuka Berdua ✨
+                        ✨ Terbuka Berdua
                       </Text>
-                    </View>
+                    </Animated.View>
                   )}
                 </View>
+
+                {myTodayQa && otherTodayQa ? (
+                  <Animated.View entering={FadeInDown.duration(260)}>
+                    <BouncyPressable
+                      onPress={handleDiscussQaInChat}
+                      style={styles.qaChatBtn}>
+                      <MessageCircle size={16} color={Pastel.pureWhite} />
+                      <Text style={styles.qaChatBtnText} maxFontSizeMultiplier={1.15}>
+                        Lanjut Bahas di Chat 💬
+                      </Text>
+                    </BouncyPressable>
+                  </Animated.View>
+                ) : null}
               </View>
 
               {/* Q&A Past History */}
@@ -813,12 +873,15 @@ export default function MochiPlayScreen() {
                   </View>
                 </View>
               ) : null}
-            </View>
+            </Animated.View>
           ) : null}
 
           {/* TAB 2: MOCHI SKIN & ACCESSORY SHOP */}
           {activeTab === 'shop' ? (
-            <View style={styles.sectionStack}>
+            <Animated.View
+              key="panel-shop"
+              entering={FadeIn.duration(220)}
+              style={styles.sectionStack}>
               <View style={[styles.bentoCard, SoftShadow]}>
                 <View style={styles.shopTargetRow}>
                   <BouncyPressable
@@ -1000,14 +1063,22 @@ export default function MochiPlayScreen() {
                   })}
                 </View>
               </View>
-            </View>
+            </Animated.View>
           ) : null}
 
           {/* TAB 3: SUIT MOCHI */}
-          {activeTab === 'suit' ? renderSuitArena() : null}
+          {activeTab === 'suit' ? (
+            <Animated.View key="panel-suit" entering={FadeIn.duration(220)}>
+              {renderSuitArena()}
+            </Animated.View>
+          ) : null}
 
           {/* TAB 4: TIC-TAC-TOE MOCHI */}
-          {activeTab === 'ttt' ? renderTttArena() : null}
+          {activeTab === 'ttt' ? (
+            <Animated.View key="panel-ttt" entering={FadeIn.duration(220)}>
+              {renderTttArena()}
+            </Animated.View>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1038,18 +1109,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Pastel.bgElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   screenTitle: {
     fontFamily: BodyFontBold,
-    fontSize: 19,
-    lineHeight: 25,
+    fontSize: 22,
+    lineHeight: 29,
     color: Pastel.text,
   },
   subMetaRow: {
@@ -1137,19 +1200,20 @@ const styles = StyleSheet.create({
   },
   qaHeroCard: {
     backgroundColor: Pastel.bgElevated,
-    borderRadius: 24,
-    padding: 18,
-    gap: 14,
+    borderRadius: 28,
+    padding: 20,
+    gap: 15,
   },
   qaTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 8,
   },
   qaCatPill: {
     backgroundColor: Pastel.taroSoft,
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
   },
@@ -1168,18 +1232,56 @@ const styles = StyleSheet.create({
   },
   qaPrompt: {
     fontFamily: BodyFontBold,
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 26,
     color: Pastel.text,
   },
   qaAnswerBox: {
-    gap: 6,
+    gap: 7,
+  },
+  qaSideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   qaSideLabel: {
     fontFamily: BodyFontSemi,
     fontSize: 12.5,
     lineHeight: 18,
     color: Pastel.textMuted,
+  },
+  qaEditPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Pastel.coralSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  qaEditText: {
+    fontFamily: BodyFontBold,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: Pastel.coralDark,
+    paddingRight: 2,
+  },
+  qaCancelPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Pastel.bgMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  qaCancelText: {
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: Pastel.textMuted,
+    paddingRight: 2,
   },
   qaInputRow: {
     flexDirection: 'row',
@@ -1189,15 +1291,15 @@ const styles = StyleSheet.create({
   qaTextInput: {
     flex: 1,
     backgroundColor: Pastel.bgMuted,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontFamily: BodyFontRegular,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     color: Pastel.text,
-    minHeight: 46,
-    maxHeight: 110,
+    minHeight: 50,
+    maxHeight: 120,
   },
   qaSendBtn: {
     width: 44,
@@ -1209,14 +1311,14 @@ const styles = StyleSheet.create({
   },
   qaSavedBubble: {
     backgroundColor: Pastel.coralSoft,
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 20,
+    padding: 15,
     gap: 6,
   },
   qaSavedText: {
     fontFamily: BodyFontSemi,
     fontSize: 14.5,
-    lineHeight: 21,
+    lineHeight: 22,
     color: Pastel.text,
   },
   qaSavedBadge: {
@@ -1225,35 +1327,60 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: Pastel.coralDark,
   },
-  qaLockedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  qaSoftLockCard: {
     backgroundColor: Pastel.bg,
-    borderRadius: 16,
-    padding: 13,
+    borderRadius: 20,
+    padding: 15,
+    gap: 11,
   },
-  qaLockedText: {
-    flex: 1,
-    fontFamily: RoundedFont,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: Pastel.textMuted,
+  qaSkeletonBars: {
+    gap: 7,
   },
-  qaSecretCard: {
+  qaSkeletonBarLong: {
+    height: 11,
+    width: '84%',
+    borderRadius: 6,
+    backgroundColor: Pastel.bgMuted,
+  },
+  qaSkeletonBarShort: {
+    height: 11,
+    width: '56%',
+    borderRadius: 6,
+    backgroundColor: Pastel.bgMuted,
+  },
+  qaSoftLockPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: Pastel.taroSoft,
-    borderRadius: 16,
-    padding: 13,
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: Pastel.bgElevated,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  qaSecretText: {
-    flex: 1,
+  qaSoftLockText: {
     fontFamily: BodyFontSemi,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 17,
+    color: Pastel.textMuted,
+    paddingRight: 2,
+  },
+  qaChatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Pastel.coral,
+    borderRadius: 999,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+  },
+  qaChatBtnText: {
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
     lineHeight: 19,
-    color: Pastel.taro,
+    color: Pastel.pureWhite,
+    paddingRight: 2,
   },
   historyQaCard: {
     backgroundColor: Pastel.bg,
