@@ -31,12 +31,12 @@ import { BouncyPressable } from '@/components/BouncyPressable';
 import { LiveSyncModal } from '@/components/LiveSyncModal';
 import {
   BodyFontBold,
+  BodyFontRegular,
   BodyFontSemi,
-  MonoFont,
-  MonoFontBold,
   Pastel,
   RoundedFont,
-  SerifFontSemi,
+  SoftShadow,
+  SoftShadowSm,
 } from '@/constants/pastelTheme';
 import { broadcastTyping } from '@/services/coupleSync';
 import { useCoupleStore } from '@/store/useCoupleStore';
@@ -102,7 +102,7 @@ const MessageBubble = React.memo(function MessageBubble({
         delayLongPress={240}
         style={({ pressed }) => [
           styles.bubble,
-          isMine ? styles.bubbleMine : styles.bubblePartner,
+          isMine ? styles.bubbleMine : [styles.bubblePartner, SoftShadowSm],
           pressed && { opacity: 0.92 },
         ]}>
         {/* Reply quote block */}
@@ -118,7 +118,7 @@ const MessageBubble = React.memo(function MessageBubble({
               {replyAuthor}
             </Text>
             <Text
-              style={[styles.replyQuoteText, isMine && { color: 'rgba(255,255,255,0.8)' }]}
+              style={[styles.replyQuoteText, isMine && { color: 'rgba(255,255,255,0.86)' }]}
               numberOfLines={2}>
               {msg.replyToPreview}
             </Text>
@@ -150,18 +150,18 @@ const MessageBubble = React.memo(function MessageBubble({
             hitSlop={8}
             withHaptic={false}
             style={styles.quickReplyIcon}>
-            <Reply size={11} color={isMine ? 'rgba(255,255,255,0.72)' : Pastel.textSoft} />
+            <Reply size={12} color={isMine ? 'rgba(255,255,255,0.82)' : Pastel.textSoft} />
           </BouncyPressable>
           <Text style={[styles.timeText, isMine && styles.timeTextMine]}>
             {formatTimeHHMM(msg.createdAt)}
           </Text>
           {isMine ? (
             msg.status === 'sent' ? (
-              <Check size={13} color="rgba(255,255,255,0.78)" />
+              <Check size={13} color="rgba(255,255,255,0.82)" />
             ) : (
               <CheckCheck
                 size={13}
-                color={msg.status === 'read' ? '#A7E6C5' : 'rgba(255,255,255,0.85)'}
+                color={msg.status === 'read' ? '#C4FFF0' : 'rgba(255,255,255,0.88)'}
               />
             )
           ) : null}
@@ -169,7 +169,12 @@ const MessageBubble = React.memo(function MessageBubble({
 
         {/* Reaction badge */}
         {msg.reaction ? (
-          <View style={[styles.reactionBadge, isMine ? { left: 8 } : { right: 8 }]}>
+          <View
+            style={[
+              styles.reactionBadge,
+              SoftShadowSm,
+              isMine ? { left: 10 } : { right: 10 },
+            ]}>
             <Text style={styles.reactionEmoji}>{msg.reaction}</Text>
           </View>
         ) : null}
@@ -366,11 +371,9 @@ export default function ChatScreen() {
       if (item.type === 'date') {
         return (
           <View style={styles.dateDividerWrap}>
-            <View style={styles.dateRule} />
             <View style={styles.dateDividerPill}>
-              <Text style={styles.dateDividerText}>{item.label.toUpperCase()}</Text>
+              <Text style={styles.dateDividerText}>{item.label}</Text>
             </View>
-            <View style={styles.dateRule} />
           </View>
         );
       }
@@ -392,13 +395,13 @@ export default function ChatScreen() {
   const bottomSpacer =
     keyboardHeight > 0
       ? keyboardHeight + 8
-      : Math.max(insets.bottom, 10) + 70;
+      : Math.max(insets.bottom, 10) + 76;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* Editorial Messenger Header */}
-        <View style={styles.header}>
+        {/* Clean Pure-White Elevated Header */}
+        <View style={[styles.header, SoftShadowSm]}>
           <View style={styles.partnerHead}>
             <View style={[styles.avatar, { backgroundColor: partnerInitialBg }]}>
               <Text style={styles.avatarText}>
@@ -406,7 +409,7 @@ export default function ChatScreen() {
               </Text>
               {isPartnerOnline ? <View style={styles.onlineDot} /> : null}
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.partnerInfo}>
               <Text style={styles.partnerName} numberOfLines={1}>
                 {partner.name} · {partner.nickname}
               </Text>
@@ -422,7 +425,7 @@ export default function ChatScreen() {
                     ? 'Online · Live 2 HP'
                     : isLive
                       ? `Aktif ${formatRelativeTime(partner.updatedAt)}`
-                      : 'Mode Lokal · Tap ikon awan untuk Live'}
+                      : 'Mode Lokal · Tap awan untuk Live'}
               </Text>
             </View>
           </View>
@@ -431,13 +434,15 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={() => setSyncModalVisible(true)}
               style={[styles.iconPill, isLive && styles.iconPillLive]}>
-              <Cloud size={14} color={isLive ? Pastel.matcha : Pastel.textMuted} />
+              <Cloud size={16} color={isLive ? Pastel.matcha : Pastel.textMuted} />
             </BouncyPressable>
             <BouncyPressable
               onPress={() => setActivePartner(activePartnerId === 'p1' ? 'p2' : 'p1')}
               style={styles.switchPill}>
-              <ArrowLeftRight size={12} color={Pastel.text} />
-              <Text style={styles.switchText}>{me.name}</Text>
+              <ArrowLeftRight size={13} color={Pastel.coral} />
+              <Text style={styles.switchText} numberOfLines={1}>
+                {me.name}
+              </Text>
             </BouncyPressable>
           </View>
         </View>
@@ -460,13 +465,13 @@ export default function ChatScreen() {
           />
         </View>
 
-        {/* Composer Area */}
-        <View style={[styles.composerOuter, { paddingBottom: bottomSpacer }]}>
+        {/* Soft Elevated Composer Area */}
+        <View style={[styles.composerOuter, SoftShadow, { paddingBottom: bottomSpacer }]}>
           {replyTarget ? (
             <View style={styles.replyBanner}>
               <View style={styles.replyStripe} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.replyBannerAuthor}>
+              <View style={styles.replyBannerCopy}>
+                <Text style={styles.replyBannerAuthor} numberOfLines={1}>
                   Membalas {replyTarget.senderId === 'p1' ? p1.name : p2.name}
                 </Text>
                 <Text style={styles.replyBannerPreview} numberOfLines={1}>
@@ -496,17 +501,17 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={() => setShowStickers((v) => !v)}
               style={[styles.mediaBtn, showStickers && styles.mediaBtnActive]}>
-              <Smile size={18} color={showStickers ? Pastel.coral : Pastel.textMuted} />
+              <Smile size={19} color={showStickers ? Pastel.coral : Pastel.textMuted} />
             </BouncyPressable>
 
             <BouncyPressable onPress={handlePickPhoto} style={styles.mediaBtn}>
-              <ImagePlus size={18} color={Pastel.textMuted} />
+              <ImagePlus size={19} color={Pastel.textMuted} />
             </BouncyPressable>
 
             <TextInput
               value={inputText}
               onChangeText={handleTextChange}
-              placeholder={`Tulis pesan untuk ${partner.name}...`}
+              placeholder={`Tulis pesan buat ${partner.name}...`}
               placeholderTextColor={Pastel.textSoft}
               style={styles.input}
               multiline
@@ -516,8 +521,8 @@ export default function ChatScreen() {
             <BouncyPressable
               onPress={handleSendText}
               disabled={!inputText.trim()}
-              style={[styles.sendBtn, !inputText.trim() && { opacity: 0.4 }]}>
-              <Send size={16} color={Pastel.pureWhite} />
+              style={[styles.sendBtn, !inputText.trim() && { opacity: 0.45 }]}>
+              <Send size={17} color={Pastel.pureWhite} />
             </BouncyPressable>
           </View>
         </View>
@@ -531,7 +536,7 @@ export default function ChatScreen() {
         onRequestClose={() => setSelectedMsg(null)}>
         <Pressable style={styles.actionOverlay} onPress={() => setSelectedMsg(null)}>
           {selectedMsg ? (
-            <View style={styles.actionSheet}>
+            <View style={[styles.actionSheet, SoftShadow]}>
               <View style={styles.emojiBar}>
                 {BUBBLE_REACTIONS.map((em) => (
                   <BouncyPressable
@@ -545,7 +550,7 @@ export default function ChatScreen() {
                       styles.emojiChoice,
                       selectedMsg.reaction === em && styles.emojiChoiceActive,
                     ]}>
-                    <Text style={{ fontSize: 21 }}>{em}</Text>
+                    <Text style={styles.emojiChoiceText}>{em}</Text>
                   </BouncyPressable>
                 ))}
               </View>
@@ -556,7 +561,7 @@ export default function ChatScreen() {
                   setSelectedMsg(null);
                 }}
                 style={styles.actionRow}>
-                <Reply size={16} color={Pastel.text} />
+                <Reply size={17} color={Pastel.text} />
                 <Text style={styles.actionRowText}>Balas Pesan Ini</Text>
               </BouncyPressable>
 
@@ -567,7 +572,7 @@ export default function ChatScreen() {
                   setSelectedMsg(null);
                 }}
                 style={styles.actionRow}>
-                <Trash2 size={16} color={Pastel.coralDark} />
+                <Trash2 size={17} color={Pastel.coralDark} />
                 <Text style={[styles.actionRowText, { color: Pastel.coralDark }]}>
                   Hapus Pesan
                 </Text>
@@ -602,86 +607,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: Pastel.bgElevated,
-    borderBottomWidth: 1,
-    borderBottomColor: Pastel.borderStrong,
+    zIndex: 2,
   },
   partnerHead: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 11,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   avatarText: {
-    fontFamily: SerifFontSemi,
+    fontFamily: BodyFontBold,
     fontSize: 18,
+    lineHeight: 24,
     color: Pastel.pureWhite,
   },
   onlineDot: {
     position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 11,
-    height: 11,
+    right: -1,
+    bottom: -1,
+    width: 12,
+    height: 12,
     borderRadius: 6,
     backgroundColor: Pastel.matcha,
     borderWidth: 2,
     borderColor: Pastel.bgElevated,
   },
+  partnerInfo: {
+    flex: 1,
+    flexShrink: 1,
+  },
   partnerName: {
-    fontFamily: SerifFontSemi,
-    fontSize: 17.5,
+    fontFamily: BodyFontBold,
+    fontSize: 16,
+    lineHeight: 22,
     color: Pastel.text,
   },
   partnerSub: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
+    fontFamily: BodyFontRegular,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   iconPill: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconPillLive: {
     backgroundColor: Pastel.matchaSoft,
-    borderColor: Pastel.matcha + '66',
   },
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     backgroundColor: Pastel.bgMuted,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: 11,
+    height: 36,
+    borderRadius: 999,
+    maxWidth: 108,
   },
   switchText: {
     fontFamily: BodyFontBold,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.text,
+    flexShrink: 1,
   },
   listWrap: {
     flex: 1,
@@ -692,29 +701,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   dateDividerWrap: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     marginVertical: 12,
-  },
-  dateRule: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Pastel.border,
   },
   dateDividerPill: {
     backgroundColor: Pastel.bgMuted,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
   dateDividerText: {
-    fontFamily: MonoFontBold,
-    fontSize: 9.5,
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: Pastel.textMuted,
-    letterSpacing: 0.7,
   },
   bubbleRow: {
     marginVertical: 4,
@@ -728,32 +728,30 @@ const styles = StyleSheet.create({
   },
   bubble: {
     maxWidth: '80%',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     gap: 4,
     position: 'relative',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   bubbleMine: {
-    backgroundColor: Pastel.matcha,
-    borderBottomRightRadius: 4,
+    backgroundColor: Pastel.coral,
+    borderBottomRightRadius: 6,
   },
   bubblePartner: {
     backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 6,
   },
   replyQuote: {
-    borderRadius: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderLeftWidth: 2.5,
-    marginBottom: 2,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderLeftWidth: 3,
+    marginBottom: 3,
   },
   replyQuoteMine: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderLeftColor: Pastel.pureWhite,
   },
   replyQuotePartner: {
@@ -762,29 +760,32 @@ const styles = StyleSheet.create({
   },
   replyQuoteAuthor: {
     fontFamily: BodyFontBold,
-    fontSize: 11,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: Pastel.text,
   },
   replyQuoteText: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
+    fontFamily: BodyFontRegular,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   chatImage: {
-    width: 210,
-    height: 165,
-    borderRadius: 10,
+    width: 215,
+    height: 168,
+    borderRadius: 14,
   },
   stickerMsg: {
-    fontSize: 40,
+    fontSize: 42,
+    lineHeight: 50,
     textAlign: 'center',
     paddingVertical: 2,
   },
   msgText: {
     fontFamily: RoundedFont,
     fontSize: 14.5,
+    lineHeight: 21,
     color: Pastel.text,
-    lineHeight: 20,
   },
   msgTextMine: {
     color: Pastel.pureWhite,
@@ -793,52 +794,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 4,
-    marginTop: 1,
+    gap: 5,
+    marginTop: 2,
   },
   quickReplyIcon: {
     marginRight: 4,
-    opacity: 0.72,
+    opacity: 0.78,
   },
   timeText: {
-    fontFamily: MonoFont,
-    fontSize: 10,
+    fontFamily: BodyFontRegular,
+    fontSize: 10.5,
+    lineHeight: 15,
     color: Pastel.textSoft,
   },
   timeTextMine: {
-    color: 'rgba(255,255,255,0.82)',
+    color: 'rgba(255,255,255,0.84)',
   },
   reactionBadge: {
     position: 'absolute',
-    bottom: -10,
+    bottom: -11,
     backgroundColor: Pastel.bgElevated,
     borderRadius: 999,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   reactionEmoji: {
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 17,
   },
   composerOuter: {
     backgroundColor: Pastel.bgElevated,
-    borderTopWidth: 1,
-    borderTopColor: Pastel.borderStrong,
-    paddingHorizontal: 10,
-    paddingTop: 9,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     gap: 8,
   },
   replyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 9,
     backgroundColor: Pastel.bg,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    borderRadius: 14,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
   },
   replyStripe: {
     width: 3,
@@ -846,20 +845,25 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: Pastel.coral,
   },
+  replyBannerCopy: {
+    flex: 1,
+  },
   replyBannerAuthor: {
     fontFamily: BodyFontBold,
-    fontSize: 11.5,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.coralDark,
   },
   replyBannerPreview: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
+    fontFamily: BodyFontRegular,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.textMuted,
   },
   replyClose: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -872,62 +876,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stickerItem: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stickerEmoji: {
-    fontSize: 21,
+    fontSize: 22,
+    lineHeight: 28,
   },
   composerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 6,
+    gap: 8,
   },
   mediaBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mediaBtnActive: {
     backgroundColor: Pastel.coralSoft,
-    borderColor: Pastel.coral,
   },
   input: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 110,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
+    minHeight: 42,
+    maxHeight: 112,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 21,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     fontFamily: RoundedFont,
-    fontSize: 14,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.text,
   },
   sendBtn: {
     width: 42,
     height: 42,
-    borderRadius: 12,
-    backgroundColor: Pastel.text,
+    borderRadius: 21,
+    backgroundColor: Pastel.coral,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(31, 27, 24, 0.4)',
+    backgroundColor: 'rgba(28, 30, 38, 0.36)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -936,11 +935,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     backgroundColor: Pastel.bgElevated,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 16,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    gap: 10,
+    gap: 8,
   },
   emojiBar: {
     flexDirection: 'row',
@@ -950,29 +947,32 @@ const styles = StyleSheet.create({
     borderBottomColor: Pastel.border,
   },
   emojiChoice: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.border,
   },
   emojiChoiceActive: {
     backgroundColor: Pastel.coralSoft,
-    borderColor: Pastel.coral,
+  },
+  emojiChoiceText: {
+    fontSize: 21,
+    lineHeight: 26,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 6,
+    gap: 11,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
   actionRowText: {
     fontFamily: BodyFontSemi,
-    fontSize: 14,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.text,
   },
 });

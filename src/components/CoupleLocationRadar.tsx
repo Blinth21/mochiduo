@@ -10,15 +10,14 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Line } from 'react-native-svg';
 
 import {
   BodyFontBold,
   BodyFontSemi,
-  MonoFont,
-  MonoFontBold,
   Pastel,
   RoundedFont,
+  SoftShadow,
 } from '@/constants/pastelTheme';
 import type { LocationSnapshot, PartnerProfile } from '@/types/couple';
 import {
@@ -35,13 +34,13 @@ interface CoupleLocationRadarProps {
   partnerLoc: LocationSnapshot;
 }
 
-const RADAR_SIZE = 224;
+const RADAR_SIZE = 220;
 const CENTER = RADAR_SIZE / 2;
 
 function normalizePinColor(hex: string): string {
   const upper = hex.toUpperCase();
-  if (upper === '#FF6B8B' || upper === '#E64D70') return Pastel.coral;
-  if (upper === '#8B74FF') return Pastel.matcha;
+  if (upper === '#C84B31' || upper === '#FF6B8B' || upper === '#E64D70') return Pastel.coral;
+  if (upper === '#3A6B54' || upper === '#8B74FF') return Pastel.matcha;
   return hex;
 }
 
@@ -78,7 +77,7 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
   }, [isFocused, pulse]);
 
   const pulseStyle = useAnimatedStyle(() => ({
-    opacity: (1 - pulse.value) * 0.45,
+    opacity: (1 - pulse.value) * 0.4,
     transform: [{ scale: 0.35 + pulse.value * 0.65 }],
   }));
 
@@ -97,7 +96,6 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
         partnerLoc.longitude
       );
 
-      // Logarithmic radial mapping so both 100m and 30km remain clearly visible inside radar
       const normalized =
         dist < 30 ? 0.14 : Math.min(0.82, 0.22 + Math.log10(dist / 50 + 1) * 0.22);
       const radiusPx = normalized * (CENTER - 28);
@@ -118,22 +116,20 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
   const bothSharing = myLoc.isSharing && partnerLoc.isSharing;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, SoftShadow]}>
       <View style={styles.topRow}>
         <View style={styles.distancePill}>
-          <Navigation size={12} color={Pastel.coralDark} />
+          <Navigation size={13} color={Pastel.coralDark} />
           <Text style={styles.distancePillText}>
-            {bothSharing
-              ? `JARAK ${distanceText.toUpperCase()}`
-              : 'MODE PRIVASI AKTIF'}
+            {bothSharing ? `Jarak ${distanceText}` : 'Mode Privasi'}
           </Text>
         </View>
 
         {bothSharing ? (
           <View style={styles.compassPill}>
-            <Compass size={12} color={Pastel.taro} />
+            <Compass size={13} color={Pastel.taro} />
             <Text style={styles.compassText}>
-              {compassDir.toUpperCase()} • {Math.round(bearingDeg)}°
+              {compassDir} · {Math.round(bearingDeg)}°
             </Text>
           </View>
         ) : null}
@@ -141,94 +137,14 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
 
       <View style={styles.radarStage}>
         <View style={styles.radarContainer}>
-          {/* Animated pulse ring */}
           <Animated.View style={[styles.pulseRing, pulseStyle]} />
 
           <Svg width={RADAR_SIZE} height={RADAR_SIZE}>
-            {/* Outer Compass Dial */}
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={CENTER - 10}
-              fill={Pastel.bg}
-              stroke={Pastel.borderStrong}
-              strokeWidth={1.5}
-            />
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={CENTER * 0.66}
-              fill="none"
-              stroke={Pastel.borderStrong}
-              strokeWidth={1}
-              strokeDasharray="4 4"
-            />
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={CENTER * 0.34}
-              fill={Pastel.coralSoft + '55'}
-              stroke="#E2B9AD"
-              strokeWidth={1}
-            />
+            {/* Soft concentric pastel rings (zero harsh wireframe outlines!) */}
+            <Circle cx={CENTER} cy={CENTER} r={CENTER - 8} fill="#F4F6FA" />
+            <Circle cx={CENTER} cy={CENTER} r={CENTER * 0.68} fill="#FFF3F5" />
+            <Circle cx={CENTER} cy={CENTER} r={CENTER * 0.36} fill="#FFE5EB" />
 
-            {/* Cartographic Crosshair Axes */}
-            <Line
-              x1={CENTER}
-              y1={14}
-              x2={CENTER}
-              y2={RADAR_SIZE - 14}
-              stroke={Pastel.border}
-              strokeWidth={1}
-            />
-            <Line
-              x1={14}
-              y1={CENTER}
-              x2={RADAR_SIZE - 14}
-              y2={CENTER}
-              stroke={Pastel.border}
-              strokeWidth={1}
-            />
-
-            {/* Cardinal Initials */}
-            <SvgText
-              x={CENTER}
-              y={23}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="700"
-              fill={Pastel.textMuted}>
-              U
-            </SvgText>
-            <SvgText
-              x={RADAR_SIZE - 18}
-              y={CENTER + 3}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="700"
-              fill={Pastel.textMuted}>
-              T
-            </SvgText>
-            <SvgText
-              x={CENTER}
-              y={RADAR_SIZE - 16}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="700"
-              fill={Pastel.textMuted}>
-              S
-            </SvgText>
-            <SvgText
-              x={19}
-              y={CENTER + 3}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="700"
-              fill={Pastel.textMuted}>
-              B
-            </SvgText>
-
-            {/* Connecting Bearing Vector */}
             {bothSharing ? (
               <Line
                 x1={CENTER}
@@ -236,25 +152,24 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
                 x2={partnerPoint.x}
                 y2={partnerPoint.y}
                 stroke={Pastel.coral}
-                strokeWidth={2}
-                strokeDasharray="4 4"
+                strokeWidth={2.2}
+                strokeDasharray="5 5"
+                opacity={0.75}
               />
             ) : null}
           </Svg>
 
-          {/* My Beacon at Center */}
           <View style={[styles.centerPin, { backgroundColor: myColor }]}>
             <Text style={styles.pinLetter}>{me.name.slice(0, 1).toUpperCase()}</Text>
           </View>
 
-          {/* Partner Beacon */}
           {bothSharing ? (
             <View
               style={[
                 styles.partnerPin,
                 {
-                  left: partnerPoint.x - 18,
-                  top: partnerPoint.y - 18,
+                  left: partnerPoint.x - 19,
+                  top: partnerPoint.y - 19,
                   backgroundColor: partnerColor,
                 },
               ]}>
@@ -275,19 +190,18 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: myColor }]} />
           <Text style={styles.legendText}>
-            {me.name} (Kamu){myLoc.spotTag ? ` — ${myLoc.spotTag}` : ''}
+            {me.name} (Kamu){myLoc.spotTag ? ` · ${myLoc.spotTag}` : ''}
           </Text>
         </View>
-        <View style={styles.legendDivider} />
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: partnerColor }]} />
           <Text style={styles.legendText}>
             {partner.name}
             {partnerLoc.isSharing
               ? distanceMeters < 50
-                ? ' — Sangat dekat'
-                : ` — ${partnerLoc.spotTag ?? partnerLoc.areaName}`
-              : ' — Privasi'}
+                ? ' · Dekat banget!'
+                : ` · ${partnerLoc.spotTag ?? partnerLoc.areaName}`
+              : ' · Privasi'}
           </Text>
         </View>
       </View>
@@ -297,12 +211,10 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Pastel.bgElevated,
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    gap: 12,
+    backgroundColor: Pastel.white,
+    borderRadius: 24,
+    padding: 16,
+    gap: 14,
   },
   topRow: {
     flexDirection: 'row',
@@ -314,36 +226,32 @@ const styles = StyleSheet.create({
   distancePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: Pastel.coralSoft,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E8C5BB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   distancePillText: {
-    fontFamily: MonoFontBold,
-    fontSize: 10.5,
+    fontFamily: BodyFontBold,
+    fontSize: 12.5,
+    lineHeight: 17,
     color: Pastel.coralDark,
-    letterSpacing: 0.4,
   },
   compassPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: Pastel.taroSoft,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#C7D0DC',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   compassText: {
-    fontFamily: MonoFontBold,
-    fontSize: 10.5,
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.taro,
-    letterSpacing: 0.4,
   },
   radarStage: {
     alignItems: 'center',
@@ -358,36 +266,37 @@ const styles = StyleSheet.create({
   },
   pulseRing: {
     position: 'absolute',
-    width: RADAR_SIZE - 20,
-    height: RADAR_SIZE - 20,
-    borderRadius: (RADAR_SIZE - 20) / 2,
-    borderWidth: 1.5,
-    borderColor: Pastel.coral,
-    backgroundColor: Pastel.coralSoft,
+    width: RADAR_SIZE - 16,
+    height: RADAR_SIZE - 16,
+    borderRadius: (RADAR_SIZE - 16) / 2,
+    backgroundColor: Pastel.coral,
   },
   centerPin: {
     position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2.5,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 3,
     borderColor: Pastel.pureWhite,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 4,
   },
   partnerPin: {
     position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2.5,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 3,
     borderColor: Pastel.pureWhite,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 5,
   },
   pinLetter: {
     fontFamily: BodyFontBold,
-    fontSize: 13.5,
+    fontSize: 14,
+    lineHeight: 19,
     color: Pastel.pureWhite,
   },
   hiddenOverlay: {
@@ -396,47 +305,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Pastel.bgElevated,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    backgroundColor: Pastel.white,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 999,
+    elevation: 2,
   },
   hiddenText: {
     fontFamily: BodyFontSemi,
     fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   legendRow: {
     gap: 8,
     backgroundColor: Pastel.bg,
-    borderRadius: 8,
-    padding: 11,
-    borderWidth: 1,
-    borderColor: Pastel.border,
-  },
-  legendDivider: {
-    height: 1,
-    backgroundColor: Pastel.border,
+    borderRadius: 16,
+    padding: 13,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 9,
   },
   legendDot: {
-    width: 9,
-    height: 9,
+    width: 10,
+    height: 10,
     borderRadius: 5,
   },
   legendText: {
     fontFamily: RoundedFont,
-    fontSize: 12.5,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.text,
     flexShrink: 1,
-  },
-  monoMeta: {
-    fontFamily: MonoFont,
   },
 });

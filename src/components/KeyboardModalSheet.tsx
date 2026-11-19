@@ -71,6 +71,7 @@ export const KeyboardModalSheet = React.memo(function KeyboardModalSheet({
           keyboardHeight > 0 && { paddingBottom: keyboardHeight },
         ]}>
         <View style={[styles.card, { maxHeight: cardMaxHeight }]}>
+          <View style={styles.handleBar} />
           {children}
         </View>
       </View>
@@ -81,20 +82,26 @@ export const KeyboardModalSheet = React.memo(function KeyboardModalSheet({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(31, 27, 24, 0.48)',
+    backgroundColor: 'rgba(28, 30, 38, 0.38)',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
   card: {
     width: '100%',
     maxWidth: 520,
-    backgroundColor: Pastel.bgElevated,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    backgroundColor: Pastel.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-    borderColor: Pastel.borderStrong,
+    paddingTop: 12,
+    paddingBottom: 22,
+  },
+  handleBar: {
+    width: 38,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: Pastel.borderStrong,
+    alignSelf: 'center',
+    marginBottom: 14,
   },
 });

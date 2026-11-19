@@ -5,7 +5,12 @@ import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
-import { Pastel, RoundedFont } from '@/constants/pastelTheme';
+import {
+  BodyFontBold,
+  BodyFontSemi,
+  Pastel,
+  RoundedFont,
+} from '@/constants/pastelTheme';
 import { ensureNotificationPermissions } from '@/services/notifications';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { NotificationPrefs } from '@/types/couple';
@@ -63,7 +68,9 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
     <KeyboardModalSheet visible={visible} onRequestClose={onClose} maxHeightRatio={0.88}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Bell size={19} color={Pastel.coralDark} />
+          <View style={styles.titleIcon}>
+            <Bell size={17} color={Pastel.coralDark} />
+          </View>
           <Text style={styles.title}>Pusat Notifikasi</Text>
         </View>
         <BouncyPressable onPress={onClose} style={styles.closeBtn}>
@@ -72,34 +79,37 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
-        {/* Test & Master Switch */}
         <View style={styles.masterCard}>
           <View style={styles.masterRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.masterTitle}>Notifikasi Semua Fitur</Text>
               <Text style={styles.masterSub}>
-                Muncul di HP & banner atas saat ada aktivitas pasangan
+                Muncul di HP &amp; banner atas saat ada aktivitas pasangan
               </Text>
             </View>
             <Switch
               value={notifPrefs.enabled}
               onValueChange={(v) => updateNotifPrefs({ enabled: v })}
-              trackColor={{ false: Pastel.border, true: Pastel.coral }}
-              thumbColor={Pastel.white}
+              trackColor={{ false: Pastel.borderStrong, true: Pastel.coral }}
+              thumbColor={Pastel.pureWhite}
             />
           </View>
 
           <BouncyPressable onPress={handleTestNotification} style={styles.testBtn}>
-            <BellRing size={15} color={Pastel.white} />
+            <BellRing size={15} color={Pastel.pureWhite} />
             <Text style={styles.testBtnText}>Tes Notifikasi Sekarang</Text>
           </BouncyPressable>
         </View>
 
-        {/* Per-feature toggles */}
         <Text style={styles.sectionTitle}>Notifikasi per Fitur</Text>
         <View style={styles.prefsBox}>
-          {PREF_ITEMS.map((item) => (
-            <View key={item.key} style={styles.prefRow}>
+          {PREF_ITEMS.map((item, idx) => (
+            <View
+              key={item.key}
+              style={[
+                styles.prefRow,
+                idx === PREF_ITEMS.length - 1 && { borderBottomWidth: 0 },
+              ]}>
               <Text style={styles.prefEmoji}>{item.emoji}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.prefLabel}>{item.label}</Text>
@@ -109,20 +119,19 @@ export const NotificationCenterModal = React.memo(function NotificationCenterMod
                 value={notifPrefs.enabled && notifPrefs[item.key]}
                 disabled={!notifPrefs.enabled}
                 onValueChange={(v) => updateNotifPrefs({ [item.key]: v })}
-                trackColor={{ false: Pastel.border, true: Pastel.matcha }}
-                thumbColor={Pastel.white}
+                trackColor={{ false: Pastel.borderStrong, true: Pastel.matcha }}
+                thumbColor={Pastel.pureWhite}
               />
             </View>
           ))}
         </View>
 
-        {/* Recent History */}
         <View style={styles.historyHeader}>
           <Text style={styles.sectionTitle}>Riwayat Terbaru</Text>
           {notifications.length > 0 ? (
             <View style={styles.historyActions}>
               <BouncyPressable onPress={markAllNotificationsRead} style={styles.smallAction}>
-                <CheckCheck size={13} color="#178C68" />
+                <CheckCheck size={13} color={Pastel.matcha} />
                 <Text style={styles.smallActionText}>Dibaca</Text>
               </BouncyPressable>
               <BouncyPressable onPress={clearNotifications} style={styles.smallAction}>
@@ -174,23 +183,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    flex: 1,
+  },
+  titleIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Pastel.coralSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 18,
-    fontWeight: '700',
+    lineHeight: 25,
     color: Pastel.text,
   },
   closeBtn: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: 17,
     backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -201,11 +219,9 @@ const styles = StyleSheet.create({
   },
   masterCard: {
     backgroundColor: Pastel.coralSoft,
-    borderRadius: 14,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: Pastel.coral + '44',
-    gap: 10,
+    borderRadius: 20,
+    padding: 15,
+    gap: 12,
   },
   masterRow: {
     flexDirection: 'row',
@@ -213,14 +229,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   masterTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.text,
   },
   masterSub: {
     fontFamily: RoundedFont,
-    fontSize: 11.5,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   testBtn: {
@@ -229,34 +246,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 7,
     backgroundColor: Pastel.coral,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 999,
   },
   testBtnText: {
-    fontFamily: RoundedFont,
-    fontSize: 13,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.pureWhite,
   },
   sectionTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 14,
+    lineHeight: 20,
     color: Pastel.text,
   },
   prefsBox: {
     backgroundColor: Pastel.bg,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
   },
   prefRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
+    gap: 11,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: Pastel.border,
   },
@@ -264,14 +279,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   prefLabel: {
-    fontFamily: RoundedFont,
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: BodyFontSemi,
+    fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.text,
   },
   prefSub: {
     fontFamily: RoundedFont,
-    fontSize: 11,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: Pastel.textMuted,
   },
   historyHeader: {
@@ -289,32 +305,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Pastel.bg,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    backgroundColor: Pastel.bgMuted,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   smallActionText: {
-    fontFamily: RoundedFont,
-    fontSize: 11,
-    fontWeight: '600',
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: Pastel.matcha,
   },
   emptyBox: {
     backgroundColor: Pastel.bg,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    borderRadius: 18,
+    padding: 18,
   },
   emptyText: {
     fontFamily: RoundedFont,
     fontSize: 12.5,
+    lineHeight: 19,
     color: Pastel.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
   },
   historyList: {
     gap: 8,
@@ -324,14 +336,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
     backgroundColor: Pastel.bg,
-    borderRadius: 12,
-    padding: 11,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    borderRadius: 16,
+    padding: 12,
   },
   historyItemUnread: {
     backgroundColor: Pastel.coralSoft,
-    borderColor: Pastel.coral + '44',
   },
   historyEmoji: {
     fontSize: 18,
@@ -345,19 +354,21 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     flex: 1,
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontBold,
     fontSize: 13,
-    fontWeight: '700',
+    lineHeight: 18,
     color: Pastel.text,
   },
   historyTime: {
     fontFamily: RoundedFont,
-    fontSize: 10.5,
+    fontSize: 11,
+    lineHeight: 15,
     color: Pastel.textMuted,
   },
   historyBody: {
     fontFamily: RoundedFont,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
 });

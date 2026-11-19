@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg';
 
-import { MonoFont, Pastel, SerifFontSemi } from '@/constants/pastelTheme';
+import { BodyFontBold, Pastel, RoundedFont } from '@/constants/pastelTheme';
 
 interface MochiBrandMarkProps {
   size?: number;
@@ -11,63 +11,84 @@ interface MochiBrandMarkProps {
 }
 
 /**
- * Custom vector emblem of MochiDuo: two nestled wagashi mochi silhouettes
- * (warm cream + Uji matcha) joined by a small vermilion hanko heart mark.
+ * Clean, stroke-free soft clay twin mochi brand mark matching the MochiDuo app icon.
  */
 export const MochiBrandMark = React.memo(function MochiBrandMark({
-  size = 34,
+  size = 38,
   showWordmark = true,
   subtitle,
 }: MochiBrandMarkProps) {
-  const svgHeight = Math.round(size * 0.72);
+  const svgHeight = Math.round(size * 0.78);
 
   return (
     <View style={styles.row}>
-      <View style={styles.sealFrame}>
-        <Svg width={size} height={svgHeight} viewBox="0 0 64 46">
-          {/* Left cream mochi */}
+      <View style={styles.iconPill}>
+        <Svg width={size} height={svgHeight} viewBox="0 0 68 52">
+          <Defs>
+            <LinearGradient id="mochiPeachGrad" x1="0" y1="0" x2="0.4" y2="1">
+              <Stop offset="0" stopColor="#FFF5EB" />
+              <Stop offset="1" stopColor="#FFE1C8" />
+            </LinearGradient>
+            <LinearGradient id="mochiMintGrad" x1="0" y1="0" x2="0.4" y2="1">
+              <Stop offset="0" stopColor="#E4F5E8" />
+              <Stop offset="1" stopColor="#C1E4CC" />
+            </LinearGradient>
+          </Defs>
+
+          {/* Soft ground shadows */}
+          <Ellipse cx={20} cy={46} rx={13} ry={3} fill="#E9D7D0" opacity={0.45} />
+          <Ellipse cx={48} cy={46} rx={13} ry={3} fill="#C6DCD0" opacity={0.45} />
+
+          {/* Left creamy-peach mochi (zero outline stroke) */}
           <Path
-            d="M4 27 C4 14, 11 8, 19.5 8 C27.5 8, 32.5 14, 32.5 27 C32.5 36.5, 27 40, 19 40 C10.5 40, 4 36.5, 4 27 Z"
-            fill="#F9F4E8"
-            stroke={Pastel.text}
-            strokeWidth={2.6}
+            d="M4 33 C4 20, 11 14, 19.5 14 C28 14, 34 20, 34 33 C34 42, 28 45, 19.5 45 C11 45, 4 42, 4 33 Z"
+            fill="url(#mochiPeachGrad)"
           />
-          {/* Left blush cheek */}
-          <Ellipse cx={15} cy={27} rx={3.3} ry={2} fill="#C84B31" opacity={0.45} />
-          {/* Left serene wink eye */}
+          <Ellipse cx={13} cy={22} rx={4.5} ry={2.4} fill="#FFFFFF" opacity={0.55} />
+          <Ellipse cx={12.5} cy={34} rx={3.4} ry={2} fill="#FF8FA3" opacity={0.45} />
+          <Ellipse cx={27} cy={34} rx={3.1} ry={1.8} fill="#FF8FA3" opacity={0.38} />
+          <Circle cx={15.5} cy={30.5} r={2} fill="#5C3D34" />
           <Path
-            d="M21 22 Q24 19.5 26.5 22"
-            stroke={Pastel.text}
-            strokeWidth={2.2}
+            d="M22.5 29.5 Q25 27.5 27.2 29.5"
+            stroke="#5C3D34"
+            strokeWidth={2}
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path
+            d="M18.3 32 Q20 33.8 21.7 32"
+            stroke="#5C3D34"
+            strokeWidth={1.7}
             strokeLinecap="round"
             fill="none"
           />
 
-          {/* Right matcha mochi */}
+          {/* Right pastel mint mochi (zero outline stroke) */}
           <Path
-            d="M31.5 27 C31.5 14, 36.5 8, 44.5 8 C53 8, 60 14, 60 27 C60 36.5, 53.5 40, 45 40 C37 40, 31.5 36.5, 31.5 27 Z"
-            fill="#C7D3AF"
-            stroke={Pastel.text}
-            strokeWidth={2.6}
+            d="M34 33 C34 20, 40 14, 48.5 14 C57 14, 64 20, 64 33 C64 42, 57 45, 48.5 45 C40 45, 34 42, 34 33 Z"
+            fill="url(#mochiMintGrad)"
           />
-          {/* Right minimalist dot eyes */}
-          <Circle cx={39.5} cy={22.5} r={1.8} fill={Pastel.text} />
-          <Circle cx={48.5} cy={23.2} r={1.8} fill={Pastel.text} />
+          <Ellipse cx={43} cy={22} rx={4.5} ry={2.4} fill="#FFFFFF" opacity={0.5} />
+          <Ellipse cx={41} cy={34} rx={3.2} ry={1.8} fill="#FF8FA3" opacity={0.38} />
+          <Ellipse cx={55.5} cy={34} rx={3.4} ry={2} fill="#FF8FA3" opacity={0.42} />
+          <Circle cx={43.5} cy={30.2} r={2} fill="#463B3D" />
+          <Circle cx={53} cy={30.8} r={2} fill="#463B3D" />
+          <Circle cx={48.3} cy={32.2} r={1.2} fill="#463B3D" />
 
-          {/* Tiny Vermilion Hanko Heart Seal between them */}
+          {/* Floating glossy strawberry heart above */}
           <Path
-            d="M32 23.5 C32 21.4, 29.4 21.2, 29.4 23.4 C29.4 25.5, 32 27.2, 32 27.2 C32 27.2, 34.6 25.5, 34.6 23.4 C34.6 21.2, 32 21.4, 32 23.5 Z"
+            d="M34 7.5 C34 4.2, 29.5 3.6, 29.5 7.4 C29.5 10.6, 34 13.6, 34 13.6 C34 13.6, 38.5 10.6, 38.5 7.4 C38.5 3.6, 34 4.2, 34 7.5 Z"
             fill={Pastel.coral}
           />
+          <Circle cx={32} cy={6.6} r={1} fill="#FFFFFF" opacity={0.55} />
         </Svg>
       </View>
 
       {showWordmark ? (
         <View style={styles.wordmarkCol}>
-          <View style={styles.wordmarkRow}>
-            <Text style={styles.wordmark}>MochiDuo</Text>
-            <View style={styles.hankoDot} />
-          </View>
+          <Text style={styles.wordmark} numberOfLines={1}>
+            MochiDuo
+          </Text>
           {subtitle ? (
             <Text style={styles.subtitle} numberOfLines={1}>
               {subtitle}
@@ -84,41 +105,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 1,
   },
-  sealFrame: {
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 12,
+  iconPill: {
+    backgroundColor: '#FFF6F4',
+    borderRadius: 14,
     paddingHorizontal: 6,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   wordmarkCol: {
-    gap: 1,
-  },
-  wordmarkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+    flexShrink: 1,
+    justifyContent: 'center',
   },
   wordmark: {
-    fontFamily: SerifFontSemi,
-    fontSize: 20,
+    fontFamily: BodyFontBold,
+    fontSize: 18,
+    lineHeight: 24,
     color: Pastel.text,
-    letterSpacing: -0.3,
-    lineHeight: 23,
-  },
-  hankoDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Pastel.coral,
-    marginTop: -6,
   },
   subtitle: {
-    fontFamily: MonoFont,
-    fontSize: 10.5,
+    fontFamily: RoundedFont,
+    fontSize: 12,
+    lineHeight: 16,
     color: Pastel.textMuted,
-    letterSpacing: 0.2,
   },
 });

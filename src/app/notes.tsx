@@ -14,14 +14,13 @@ import { BouncyPressable } from '@/components/BouncyPressable';
 import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
 import {
   BodyFontBold,
+  BodyFontRegular,
   BodyFontSemi,
-  MonoFont,
-  MonoFontBold,
   NOTE_PALETTES,
   Pastel,
   RoundedFont,
-  SerifFont,
-  SerifFontSemi,
+  SoftShadow,
+  SoftShadowSm,
 } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { LoveNote, NoteColorId } from '@/types/couple';
@@ -50,41 +49,40 @@ const NoteCard = React.memo(function NoteCard({
     NOTE_PALETTES.find((p) => p.id === item.colorId) ?? NOTE_PALETTES[0];
 
   return (
-    <View
-      style={[
-        styles.noteCard,
-        { backgroundColor: palette.bg, borderColor: palette.border },
-      ]}>
-      <View style={[styles.noteTop, { borderBottomColor: palette.border }]}>
-        <Text style={[styles.authorChipText, { color: palette.accent }]}>
-          DARI {authorName.toUpperCase()} • {formatRelativeTime(item.createdAt).toUpperCase()}
-        </Text>
+    <View style={[styles.noteCard, SoftShadowSm, { backgroundColor: palette.bg }]}>
+      <View style={styles.noteTop}>
+        <View style={styles.authorPill}>
+          <Text style={[styles.authorChipText, { color: palette.accent }]} numberOfLines={1}>
+            Dari {authorName} · {formatRelativeTime(item.createdAt)}
+          </Text>
+        </View>
 
         <View style={styles.noteActions}>
           <BouncyPressable
             onPress={() => onTogglePin(item.id)}
             style={[
               styles.iconCircle,
-              { borderColor: palette.border },
-              item.pinned && { backgroundColor: palette.accent, borderColor: palette.accent },
+              item.pinned && { backgroundColor: palette.accent },
             ]}
             accessibilityLabel="Sematkan ke Beranda">
             <Pin
-              size={12}
+              size={13}
               color={item.pinned ? Pastel.pureWhite : palette.accent}
             />
           </BouncyPressable>
 
           <BouncyPressable
             onPress={() => onDelete(item.id)}
-            style={[styles.iconCircle, { borderColor: palette.border }]}>
-            <Trash2 size={12} color={Pastel.textMuted} />
+            style={styles.iconCircle}>
+            <Trash2 size={13} color={Pastel.textMuted} />
           </BouncyPressable>
         </View>
       </View>
 
       <View style={styles.noteBodyRow}>
-        <Text style={styles.noteSticker}>{item.sticker}</Text>
+        <View style={styles.stickerCircle}>
+          <Text style={styles.noteSticker}>{item.sticker}</Text>
+        </View>
         <Text style={styles.noteMessage}>{item.message}</Text>
       </View>
 
@@ -98,8 +96,7 @@ const NoteCard = React.memo(function NoteCard({
               scaleTo={0.85}
               style={[
                 styles.reactBtn,
-                { borderColor: active ? palette.accent : palette.border },
-                active && { backgroundColor: Pastel.bgElevated },
+                active && [styles.reactBtnActive, SoftShadowSm],
               ]}>
               <Text style={styles.reactEmoji}>{emoji}</Text>
             </BouncyPressable>
@@ -108,9 +105,9 @@ const NoteCard = React.memo(function NoteCard({
 
         {item.pinned ? (
           <View style={styles.pinnedBadge}>
-            <Pin size={10} color={palette.accent} />
+            <Pin size={11} color={palette.accent} />
             <Text style={[styles.pinnedFlag, { color: palette.accent }]}>
-              DI BERANDA
+              Di Beranda
             </Text>
           </View>
         ) : null}
@@ -206,54 +203,59 @@ export default function NotesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* Editorial Header */}
+        {/* Clean Airy Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.pageTitle}>Papan Love Notes</Text>
+          <View style={styles.headerCopy}>
+            <Text style={styles.pageTitle}>Love Notes</Text>
             <Text style={styles.pageSub}>
-              {loveNotes.length} CATATAN • MENULIS SEBAGAI {activePartner.name.toUpperCase()}
+              {loveNotes.length} catatan manis · menulis sebagai {activePartner.name}
             </Text>
           </View>
 
           <BouncyPressable
             onPress={() => setModalVisible(true)}
             style={styles.addBtn}>
-            <Plus size={15} color={Pastel.pureWhite} />
+            <Plus size={16} color={Pastel.pureWhite} />
             <Text style={styles.addBtnText}>Tulis</Text>
           </BouncyPressable>
         </View>
 
-        {/* Filter Bar */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScrollWrap}
-          contentContainerStyle={styles.filterScroll}>
-          {[
-            { id: 'all', label: 'Semua' },
-            { id: 'p1', label: `Dari ${p1.name}` },
-            { id: 'p2', label: `Dari ${p2.name}` },
-            { id: 'pinned', label: 'Disematkan' },
-          ].map((tab) => {
-            const active = filter === tab.id;
-            return (
-              <BouncyPressable
-                key={tab.id}
-                onPress={() => setFilter(tab.id as any)}
-                style={[styles.filterChip, active && styles.filterChipActive]}>
-                <Text
+        {/* Borderless Filter Pills (no maxHeight clipping!) */}
+        <View style={styles.filterWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScroll}>
+            {[
+              { id: 'all', label: 'Semua' },
+              { id: 'p1', label: `Dari ${p1.name}` },
+              { id: 'p2', label: `Dari ${p2.name}` },
+              { id: 'pinned', label: 'Disematkan' },
+            ].map((tab) => {
+              const active = filter === tab.id;
+              return (
+                <BouncyPressable
+                  key={tab.id}
+                  onPress={() => setFilter(tab.id as any)}
                   style={[
-                    styles.filterChipText,
-                    active && styles.filterChipTextActive,
+                    styles.filterChip,
+                    SoftShadowSm,
+                    active && styles.filterChipActive,
                   ]}>
-                  {tab.label}
-                </Text>
-              </BouncyPressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      active && styles.filterChipTextActive,
+                    ]}>
+                    {tab.label}
+                  </Text>
+                </BouncyPressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-        {/* FlashList Stationery Notes */}
+        {/* FlashList Soft Pastel Notes */}
         <View style={styles.listFlex}>
           <FlashList
             data={filteredNotes}
@@ -262,11 +264,13 @@ export default function NotesScreen() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              <View style={styles.emptyBox}>
-                <StickyNote size={30} color={Pastel.textMuted} />
-                <Text style={styles.emptyTitle}>Belum ada catatan di filter ini</Text>
+              <View style={[styles.emptyBox, SoftShadow]}>
+                <View style={styles.emptyIconCircle}>
+                  <StickyNote size={26} color={Pastel.coral} />
+                </View>
+                <Text style={styles.emptyTitle}>Belum ada catatan di sini</Text>
                 <Text style={styles.emptySub}>
-                  Tulis catatan singkat atau kata semangat untuk pasanganmu.
+                  Tulis catatan singkat atau kata semangat manis buat pasanganmu.
                 </Text>
               </View>
             }
@@ -291,7 +295,7 @@ export default function NotesScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.modalBody}>
-          <Text style={styles.inputLabel}>Pesan ({activePartner.name})</Text>
+          <Text style={styles.inputLabel}>Pesan dari {activePartner.name}</Text>
           <TextInput
             value={message}
             onChangeText={setMessage}
@@ -302,7 +306,7 @@ export default function NotesScreen() {
             maxLength={220}
           />
 
-          <Text style={styles.inputLabel}>Kertas Catatan</Text>
+          <Text style={styles.inputLabel}>Warna Catatan</Text>
           <View style={styles.paletteRow}>
             {NOTE_PALETTES.map((p) => {
               const selected = colorId === p.id;
@@ -312,10 +316,14 @@ export default function NotesScreen() {
                   onPress={() => setColorId(p.id)}
                   style={[
                     styles.paletteSwatch,
-                    { backgroundColor: p.bg, borderColor: selected ? p.accent : p.border },
-                    selected && { borderWidth: 2 },
+                    { backgroundColor: p.bg },
+                    selected && { backgroundColor: p.accent },
                   ]}>
-                  <Text style={[styles.paletteLabel, { color: p.accent }]}>
+                  <Text
+                    style={[
+                      styles.paletteLabel,
+                      { color: selected ? Pastel.pureWhite : p.accent },
+                    ]}>
                     {p.label}
                   </Text>
                 </BouncyPressable>
@@ -342,18 +350,15 @@ export default function NotesScreen() {
             onPress={() => setPinOnCreate((v) => !v)}
             style={[
               styles.pinToggleRow,
-              pinOnCreate && {
-                backgroundColor: Pastel.coralSoft,
-                borderColor: Pastel.coral,
-              },
+              pinOnCreate && { backgroundColor: Pastel.coralSoft },
             ]}>
-            <Pin size={14} color={pinOnCreate ? Pastel.coralDark : Pastel.textMuted} />
+            <Pin size={15} color={pinOnCreate ? Pastel.coralDark : Pastel.textMuted} />
             <Text
               style={[
                 styles.pinToggleText,
                 pinOnCreate && { color: Pastel.coralDark, fontFamily: BodyFontBold },
               ]}>
-              Sematkan di halaman Beranda
+              Sematkan di halaman Home
             </Text>
           </BouncyPressable>
 
@@ -378,64 +383,69 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: 520,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 18,
+    paddingTop: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 14,
+  },
+  headerCopy: {
+    flex: 1,
+    flexShrink: 1,
   },
   pageTitle: {
-    fontFamily: SerifFontSemi,
-    fontSize: 25,
+    fontFamily: BodyFontBold,
+    fontSize: 23,
+    lineHeight: 31,
     color: Pastel.text,
   },
   pageSub: {
-    fontFamily: MonoFont,
-    fontSize: 10,
+    fontFamily: BodyFontRegular,
+    fontSize: 13,
+    lineHeight: 19,
     color: Pastel.textMuted,
-    letterSpacing: 0.5,
-    marginTop: 2,
+    marginTop: 1,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: Pastel.text,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 10,
+    gap: 6,
+    backgroundColor: Pastel.coral,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 999,
   },
   addBtnText: {
     fontFamily: BodyFontBold,
-    fontSize: 13,
+    fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.pureWhite,
   },
-  filterScrollWrap: {
-    maxHeight: 42,
-    marginBottom: 10,
+  filterWrap: {
+    marginBottom: 12,
   },
   filterScroll: {
-    gap: 7,
-    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 1,
   },
   filterChip: {
     backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
   },
   filterChipActive: {
-    backgroundColor: Pastel.text,
-    borderColor: Pastel.text,
+    backgroundColor: Pastel.coral,
   },
   filterChipText: {
     fontFamily: BodyFontSemi,
-    fontSize: 12.5,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.textMuted,
   },
   filterChipTextActive: {
@@ -446,106 +456,131 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingBottom: 112,
+    paddingBottom: 118,
     paddingTop: 4,
   },
   noteCard: {
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    marginBottom: 12,
-    gap: 11,
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 14,
+    gap: 13,
   },
   noteTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    paddingBottom: 9,
-    borderBottomWidth: 1,
+  },
+  authorPill: {
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+    flexShrink: 1,
   },
   authorChipText: {
-    fontFamily: MonoFontBold,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    flexShrink: 1,
+    fontFamily: BodyFontBold,
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   noteActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   iconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-    borderWidth: 1,
-    backgroundColor: 'rgba(252,251,248,0.85)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.86)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   noteBodyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 11,
+    gap: 12,
+  },
+  stickerCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   noteSticker: {
-    fontSize: 24,
-    marginTop: 1,
+    fontSize: 22,
+    lineHeight: 28,
   },
   noteMessage: {
     flex: 1,
-    fontFamily: SerifFont,
-    fontSize: 16.5,
-    color: Pastel.text,
+    fontFamily: BodyFontSemi,
+    fontSize: 15.5,
     lineHeight: 24,
+    color: Pastel.text,
   },
   reactionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   reactBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(252,251,248,0.65)',
-    borderWidth: 1,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  reactBtnActive: {
+    backgroundColor: Pastel.bgElevated,
+  },
   reactEmoji: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 20,
   },
   pinnedBadge: {
     marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
   pinnedFlag: {
-    fontFamily: MonoFontBold,
-    fontSize: 9.5,
-    letterSpacing: 0.5,
+    fontFamily: BodyFontBold,
+    fontSize: 11,
+    lineHeight: 16,
   },
   emptyBox: {
     backgroundColor: Pastel.bgElevated,
-    borderRadius: 12,
-    padding: 26,
+    borderRadius: 24,
+    padding: 28,
     alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    gap: 10,
     marginTop: 18,
   },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Pastel.coralSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyTitle: {
-    fontFamily: SerifFontSemi,
-    fontSize: 16,
+    fontFamily: BodyFontBold,
+    fontSize: 17,
+    lineHeight: 24,
     color: Pastel.text,
   },
   emptySub: {
-    fontFamily: RoundedFont,
-    fontSize: 13,
+    fontFamily: BodyFontRegular,
+    fontSize: 13.5,
+    lineHeight: 20,
     color: Pastel.textMuted,
     textAlign: 'center',
   },
@@ -553,20 +588,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   modalTitle: {
-    fontFamily: SerifFontSemi,
+    fontFamily: BodyFontBold,
     fontSize: 20,
+    lineHeight: 28,
     color: Pastel.text,
   },
   modalCloseBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -575,26 +609,24 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   inputLabel: {
-    fontFamily: MonoFontBold,
-    fontSize: 10,
+    fontFamily: BodyFontSemi,
+    fontSize: 13,
+    lineHeight: 19,
     color: Pastel.textMuted,
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
     marginTop: 4,
   },
   modalInput: {
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontFamily: RoundedFont,
-    fontSize: 14,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.text,
   },
   textArea: {
-    minHeight: 92,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
   paletteRow: {
@@ -603,14 +635,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   paletteSwatch: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
   },
   paletteLabel: {
     fontFamily: BodyFontBold,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   stickerRow: {
     flexDirection: 'row',
@@ -618,49 +650,47 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stickerBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stickerBtnActive: {
     backgroundColor: Pastel.coralSoft,
-    borderColor: Pastel.coral,
   },
   stickerText: {
-    fontSize: 19,
+    fontSize: 20,
+    lineHeight: 26,
   },
   pinToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    gap: 9,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
     marginTop: 4,
   },
   pinToggleText: {
     fontFamily: BodyFontSemi,
     fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.textMuted,
   },
   saveBtn: {
     backgroundColor: Pastel.coral,
-    borderRadius: 10,
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   saveBtnText: {
     fontFamily: BodyFontBold,
-    fontSize: 14.5,
+    fontSize: 15,
+    lineHeight: 21,
     color: Pastel.pureWhite,
   },
 });

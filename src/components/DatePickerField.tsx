@@ -10,7 +10,12 @@ import {
 
 import { BouncyPressable } from '@/components/BouncyPressable';
 import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
-import { Pastel, RoundedFont } from '@/constants/pastelTheme';
+import {
+  BodyFontBold,
+  BodyFontSemi,
+  Pastel,
+  RoundedFont,
+} from '@/constants/pastelTheme';
 import { formatIndonesianDate } from '@/utils/dateCalc';
 import { triggerMediumHaptic } from '@/utils/haptics';
 
@@ -175,24 +180,24 @@ export const DatePickerField = React.memo(function DatePickerField({
             onChangeText={onChange}
             placeholder={allowFreeText ? 'Contoh: Sabtu Sore / 2026-08-17' : 'YYYY-MM-DD'}
             placeholderTextColor={Pastel.textSoft}
-            style={[styles.inlineInput, compact && { paddingVertical: 9 }]}
+            style={[styles.inlineInput, compact && { paddingVertical: 10 }]}
             autoFocus
           />
           <BouncyPressable onPress={openPicker} style={styles.modeIconBtn}>
-            <Calendar size={16} color={Pastel.coralDark} />
+            <Calendar size={17} color={Pastel.coral} />
           </BouncyPressable>
         </View>
       ) : (
         <View style={styles.inlineInputRow}>
           <BouncyPressable
             onPress={openPicker}
-            style={[styles.pickerBtn, compact && { paddingVertical: 10 }]}>
-            <Calendar size={15} color={Pastel.coralDark} />
+            style={[styles.pickerBtn, compact && { paddingVertical: 11 }]}>
+            <Calendar size={16} color={Pastel.coral} />
             <Text
               numberOfLines={1}
               style={[
                 styles.pickerBtnText,
-                !value.trim() && { color: Pastel.textSoft, fontWeight: '500' },
+                !value.trim() && { color: Pastel.textSoft, fontFamily: RoundedFont },
               ]}>
               {displayLabel}
             </Text>
@@ -202,7 +207,7 @@ export const DatePickerField = React.memo(function DatePickerField({
             onPress={() => setTypingMode(true)}
             style={styles.modeIconBtn}
             accessibilityLabel="Ketik tanggal manual">
-            <KeyboardIcon size={16} color={Pastel.text} />
+            <KeyboardIcon size={17} color={Pastel.textMuted} />
           </BouncyPressable>
         </View>
       )}
@@ -224,14 +229,13 @@ export const DatePickerField = React.memo(function DatePickerField({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.modalScroll}>
-          {/* Manual typing option inside picker too */}
           <View style={styles.manualBox}>
-            <Text style={styles.manualLabel}>Ketik langsung atau pilih dari kalender di bawah:</Text>
+            <Text style={styles.manualLabel}>Ketik langsung atau klik kalender:</Text>
             <View style={styles.manualRow}>
               <TextInput
                 value={draftText}
                 onChangeText={setDraftText}
-                placeholder={allowFreeText ? 'YYYY-MM-DD atau misal: Sabtu Sore' : 'YYYY-MM-DD'}
+                placeholder={allowFreeText ? 'YYYY-MM-DD atau Sabtu Sore' : 'YYYY-MM-DD'}
                 placeholderTextColor={Pastel.textSoft}
                 style={styles.manualInput}
               />
@@ -241,7 +245,6 @@ export const DatePickerField = React.memo(function DatePickerField({
             </View>
           </View>
 
-          {/* Quick presets (Today, Tomorrow, etc.) */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -270,7 +273,6 @@ export const DatePickerField = React.memo(function DatePickerField({
             ))}
           </ScrollView>
 
-          {/* Month & Year Navigator */}
           <View style={styles.calNav}>
             <BouncyPressable onPress={handlePrevMonth} style={styles.navArrow}>
               <ChevronLeft size={18} color={Pastel.text} />
@@ -384,46 +386,41 @@ const styles = StyleSheet.create({
   inlineInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   pickerBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   pickerBtnText: {
     flex: 1,
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 13.5,
-    fontWeight: '600',
+    lineHeight: 19,
     color: Pastel.text,
   },
   inlineInput: {
     flex: 1,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.coral,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     fontFamily: RoundedFont,
     fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.text,
   },
   modeIconBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 16,
     backgroundColor: Pastel.bgMuted,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -431,38 +428,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   modalTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 17.5,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 18,
+    lineHeight: 25,
     color: Pastel.text,
   },
   closeBtn: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: 17,
     backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalScroll: {
-    gap: 10,
+    gap: 12,
     paddingBottom: 14,
   },
   manualBox: {
-    gap: 6,
+    gap: 8,
     backgroundColor: Pastel.bg,
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    borderRadius: 18,
+    padding: 12,
   },
   manualLabel: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
-    fontWeight: '600',
+    fontFamily: BodyFontSemi,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   manualRow: {
@@ -472,93 +467,83 @@ const styles = StyleSheet.create({
   },
   manualInput: {
     flex: 1,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 10,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
+    backgroundColor: Pastel.white,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     fontFamily: RoundedFont,
     fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.text,
   },
   applyBtn: {
-    backgroundColor: Pastel.text,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
+    backgroundColor: Pastel.coral,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
   },
   applyBtnText: {
-    fontFamily: RoundedFont,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.pureWhite,
   },
   presetRow: {
-    gap: 7,
+    gap: 8,
     paddingVertical: 2,
   },
   presetChip: {
     backgroundColor: Pastel.coralSoft,
-    borderWidth: 1,
-    borderColor: Pastel.coral + '55',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
   presetText: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: BodyFontSemi,
+    fontSize: 12.5,
+    lineHeight: 17,
     color: Pastel.coralDark,
   },
   calNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 2,
   },
   navArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthYearBtn: {
     backgroundColor: Pastel.bgMuted,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
   },
   monthYearText: {
-    fontFamily: RoundedFont,
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 14,
+    lineHeight: 19,
     color: Pastel.text,
   },
   calendarBox: {
     backgroundColor: Pastel.bg,
-    borderRadius: 14,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    borderRadius: 20,
+    padding: 12,
   },
   weekdayRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   weekdayText: {
     flex: 1,
     textAlign: 'center',
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 11.5,
-    fontWeight: '700',
+    lineHeight: 16,
     color: Pastel.textMuted,
   },
   daysGrid: {
@@ -567,78 +552,71 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: '14.285%',
-    aspectRatio: 1.15,
+    aspectRatio: 1.12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 14,
   },
   dayCellSelected: {
     backgroundColor: Pastel.coral,
   },
   dayText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 13.5,
-    fontWeight: '600',
+    lineHeight: 19,
     color: Pastel.text,
   },
   dayTextSelected: {
     color: Pastel.pureWhite,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
   },
   yearMonthContainer: {
     backgroundColor: Pastel.bg,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Pastel.border,
-    gap: 8,
+    borderRadius: 20,
+    padding: 14,
+    gap: 10,
   },
   subTitle: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
+    fontSize: 12.5,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   yearGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 7,
   },
   monthGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 7,
   },
   yearCell: {
     width: '23%',
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: Pastel.white,
     alignItems: 'center',
   },
   monthCell: {
     width: '23%',
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: Pastel.white,
     alignItems: 'center',
   },
   yearCellActive: {
     backgroundColor: Pastel.coral,
-    borderColor: Pastel.coral,
   },
   yearCellText: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     fontSize: 12.5,
-    fontWeight: '600',
+    lineHeight: 17,
     color: Pastel.text,
   },
   yearCellTextActive: {
     color: Pastel.pureWhite,
-    fontWeight: '700',
+    fontFamily: BodyFontBold,
   },
 });

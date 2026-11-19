@@ -37,7 +37,7 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
       description: 'Notifikasi chat, pelukan, mood, lokasi, kenangan, dan kencan pasangan',
       importance: AndroidImportance?.MAX ?? 7,
       vibrationPattern: [0, 180, 100, 180],
-      lightColor: '#C84B31',
+      lightColor: '#FF5C7A',
       sound: 'default',
       enableVibrate: true,
       showBadge: true,

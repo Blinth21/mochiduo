@@ -1,15 +1,13 @@
-import { SlidersHorizontal } from 'lucide-react-native';
+import { Heart, Pencil } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
 import {
+  BodyFontBold,
   BodyFontSemi,
-  MonoFont,
-  MonoFontBold,
   Pastel,
   RoundedFont,
-  SerifFontSemi,
 } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import {
@@ -43,32 +41,19 @@ const LiveClockRow = React.memo(function LiveClockRow({
   const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
-    <View style={styles.counterLedger}>
-      <View style={styles.daysBlock}>
+    <View style={styles.heroStats}>
+      <View style={styles.daysRow}>
         <Text style={styles.bigDaysNumber}>{days}</Text>
-        <View style={styles.daysLabelCol}>
-          <Text style={styles.daysUnitKicker}>HARI BERSAMA</Text>
-          <Text style={styles.daysSinceSub}>
-            Sejak {formatIndonesianDate(startDate)}
-          </Text>
+        <View style={styles.daysTextCol}>
+          <Text style={styles.daysLabel}>hari bersama</Text>
+          <Text style={styles.sinceLabel}>Sejak {formatIndonesianDate(startDate)}</Text>
         </View>
       </View>
 
-      <View style={styles.clockStrip}>
-        <View style={styles.clockUnit}>
-          <Text style={styles.clockValue}>{pad(hours)}</Text>
-          <Text style={styles.clockLabel}>JAM</Text>
-        </View>
-        <Text style={styles.clockSep}>:</Text>
-        <View style={styles.clockUnit}>
-          <Text style={styles.clockValue}>{pad(minutes)}</Text>
-          <Text style={styles.clockLabel}>MNT</Text>
-        </View>
-        <Text style={styles.clockSep}>:</Text>
-        <View style={[styles.clockUnit, styles.clockUnitLive]}>
-          <Text style={[styles.clockValue, { color: Pastel.coral }]}>{pad(seconds)}</Text>
-          <Text style={[styles.clockLabel, { color: Pastel.coral }]}>DTK</Text>
-        </View>
+      <View style={styles.clockPill}>
+        <Text style={styles.clockText}>
+          {pad(hours)}j : {pad(minutes)}m : {pad(seconds)}d
+        </Text>
       </View>
     </View>
   );
@@ -88,18 +73,21 @@ export const AnniversaryBanner = React.memo(function AnniversaryBanner({
   );
 
   return (
-    <View style={styles.ledgerCard}>
-      {/* Editorial Issue Top Rule */}
+    <View style={styles.heroCard}>
+      {/* Soft ambient decorative circles inside hero */}
+      <View style={styles.orbTopRight} pointerEvents="none" />
+      <View style={styles.orbBottomLeft} pointerEvents="none" />
+
       <View style={styles.topRow}>
-        <View style={styles.editionCol}>
-          <View style={styles.sealSquare}>
-            <Text style={styles.sealSquareText}>NO.01</Text>
+        <View style={styles.titleWrap}>
+          <View style={styles.heartPill}>
+            <Heart size={13} color={Pastel.pureWhite} fill={Pastel.pureWhite} />
           </View>
-          <View>
-            <Text style={styles.coupleHeadline} numberOfLines={1}>
+          <View style={styles.titleTextCol}>
+            <Text style={styles.coupleTitle} numberOfLines={1}>
               {coupleTitle}
             </Text>
-            <Text style={styles.partnersLine} numberOfLines={1}>
+            <Text style={styles.partnersSub} numberOfLines={1}>
               {p1Name} &amp; {p2Name}
             </Text>
           </View>
@@ -107,43 +95,38 @@ export const AnniversaryBanner = React.memo(function AnniversaryBanner({
 
         <BouncyPressable
           onPress={onPressEdit}
-          style={styles.editButton}
+          style={styles.editBtn}
           accessibilityLabel="Edit Profil Pasangan">
-          <SlidersHorizontal size={15} color={Pastel.textMuted} />
+          <Pencil size={14} color={Pastel.pureWhite} />
         </BouncyPressable>
       </View>
 
-      <View style={styles.hairline} />
-
       <LiveClockRow startDate={anniversaryDate} />
 
-      {/* Bottom Milestone Rule */}
-      <View style={styles.milestonePanel}>
-        <View style={styles.milestoneHeader}>
-          <Text style={styles.annivCaption}>
+      <View style={styles.milestoneBox}>
+        <View style={styles.milestoneTop}>
+          <Text style={styles.milestoneTitle}>
             {info.isTodayAnniversary
-              ? `Anniversary ke-${info.annivNumber} hari ini`
-              : `Menuju Anniv ke-${info.annivNumber} · ${info.daysLeft} hari lagi`}
+              ? `Happy Anniv ke-${info.annivNumber}!`
+              : `Anniv ke-${info.annivNumber} · ${info.daysLeft} hari lagi`}
           </Text>
-          <Text style={styles.nextDateMono}>{info.nextDateFormatted}</Text>
+          <Text style={styles.milestoneDate}>{info.nextDateFormatted}</Text>
         </View>
 
         <View style={styles.progressTrack}>
           <View
             style={[
               styles.progressFill,
-              { width: `${Math.max(6, Math.round(info.progressRatio * 100))}%` },
+              { width: `${Math.max(8, Math.round(info.progressRatio * 100))}%` },
             ]}
           />
         </View>
 
-        <View style={styles.milestoneFooter}>
-          <Text style={styles.milestoneDetail}>
+        <View style={styles.milestoneBottom}>
+          <Text style={styles.milestoneFoot}>
             Target {info.nextMilestoneDays} hari · sisa {info.daysToMilestone} hari
           </Text>
-          <Text style={styles.milestonePct}>
-            {Math.round(info.progressRatio * 100)}%
-          </Text>
+          <Text style={styles.milestonePct}>{Math.round(info.progressRatio * 100)}%</Text>
         </View>
       </View>
     </View>
@@ -151,182 +134,178 @@ export const AnniversaryBanner = React.memo(function AnniversaryBanner({
 });
 
 const styles = StyleSheet.create({
-  ledgerCard: {
-    backgroundColor: Pastel.bgElevated,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    gap: 14,
+  heroCard: {
+    backgroundColor: Pastel.coral,
+    borderRadius: 26,
+    padding: 20,
+    gap: 16,
+    overflow: 'hidden',
+    shadowColor: '#FF5C7A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  orbTopRight: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    top: -48,
+    right: -32,
+  },
+  orbBottomLeft: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    bottom: -36,
+    left: -24,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 12,
   },
-  editionCol: {
+  titleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
   },
-  sealSquare: {
-    borderWidth: 1.5,
-    borderColor: Pastel.coral,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    backgroundColor: Pastel.coralSoft,
-  },
-  sealSquareText: {
-    fontFamily: MonoFontBold,
-    fontSize: 10,
-    color: Pastel.coral,
-    letterSpacing: 0.6,
-  },
-  coupleHeadline: {
-    fontFamily: SerifFontSemi,
-    fontSize: 19,
-    color: Pastel.text,
-    lineHeight: 22,
-  },
-  partnersLine: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
-    color: Pastel.textMuted,
-  },
-  editButton: {
+  heartPill: {
     width: 34,
     height: 34,
-    borderRadius: 10,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.24)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hairline: {
-    height: 1,
-    backgroundColor: Pastel.border,
+  titleTextCol: {
+    flex: 1,
   },
-  counterLedger: {
-    flexDirection: 'row',
+  coupleTitle: {
+    fontFamily: BodyFontBold,
+    fontSize: 17,
+    lineHeight: 23,
+    color: Pastel.pureWhite,
+  },
+  partnersSub: {
+    fontFamily: RoundedFont,
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.88)',
+  },
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'center',
   },
-  daysBlock: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+  heroStats: {
     gap: 10,
   },
+  daysRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
   bigDaysNumber: {
-    fontFamily: SerifFontSemi,
-    fontSize: 48,
-    color: Pastel.text,
-    letterSpacing: -1.5,
-    lineHeight: 50,
+    fontFamily: BodyFontBold,
+    fontSize: 44,
+    lineHeight: 54,
+    color: Pastel.pureWhite,
     fontVariant: ['tabular-nums'],
   },
-  daysLabelCol: {
-    gap: 2,
+  daysTextCol: {
+    paddingBottom: 6,
+    flexShrink: 1,
   },
-  daysUnitKicker: {
-    fontFamily: MonoFontBold,
-    fontSize: 10.5,
-    color: Pastel.coral,
-    letterSpacing: 1,
+  daysLabel: {
+    fontFamily: BodyFontBold,
+    fontSize: 15,
+    lineHeight: 21,
+    color: Pastel.pureWhite,
   },
-  daysSinceSub: {
+  sinceLabel: {
     fontFamily: RoundedFont,
-    fontSize: 11.5,
-    color: Pastel.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.86)',
   },
-  clockStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.border,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    gap: 6,
+  clockPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  clockUnit: {
-    alignItems: 'center',
-    minWidth: 26,
-  },
-  clockUnitLive: {},
-  clockValue: {
-    fontFamily: MonoFontBold,
-    fontSize: 14,
-    color: Pastel.text,
+  clockText: {
+    fontFamily: BodyFontSemi,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: Pastel.pureWhite,
     fontVariant: ['tabular-nums'],
   },
-  clockLabel: {
-    fontFamily: MonoFont,
-    fontSize: 8.5,
-    color: Pastel.textSoft,
-    letterSpacing: 0.4,
-  },
-  clockSep: {
-    fontFamily: MonoFont,
-    fontSize: 13,
-    color: Pastel.borderStrong,
-    marginBottom: 8,
-  },
-  milestonePanel: {
-    backgroundColor: Pastel.bgMuted,
-    borderRadius: 12,
-    padding: 12,
+  milestoneBox: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 18,
+    padding: 13,
     gap: 8,
-    borderWidth: 1,
-    borderColor: Pastel.border,
   },
-  milestoneHeader: {
+  milestoneTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: 6,
   },
-  annivCaption: {
+  milestoneTitle: {
     fontFamily: BodyFontSemi,
-    fontSize: 12.5,
-    color: Pastel.text,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Pastel.pureWhite,
   },
-  nextDateMono: {
-    fontFamily: MonoFont,
-    fontSize: 11,
-    color: Pastel.textMuted,
+  milestoneDate: {
+    fontFamily: RoundedFont,
+    fontSize: 12,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.88)',
   },
   progressTrack: {
-    height: 5,
+    height: 7,
     borderRadius: 999,
-    backgroundColor: Pastel.bgElevated,
+    backgroundColor: 'rgba(255,255,255,0.28)',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: 999,
-    backgroundColor: Pastel.coral,
+    backgroundColor: Pastel.pureWhite,
   },
-  milestoneFooter: {
+  milestoneBottom: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  milestoneDetail: {
+  milestoneFoot: {
     fontFamily: RoundedFont,
-    fontSize: 11,
-    color: Pastel.textMuted,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.88)',
+    flexShrink: 1,
   },
   milestonePct: {
-    fontFamily: MonoFont,
-    fontSize: 11,
-    color: Pastel.coral,
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Pastel.pureWhite,
   },
 });

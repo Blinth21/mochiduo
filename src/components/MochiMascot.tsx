@@ -10,9 +10,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg';
 
-import { Pastel } from '@/constants/pastelTheme';
 import type { MoodId } from '@/types/couple';
 
 interface MochiMascotProps {
@@ -23,32 +22,31 @@ interface MochiMascotProps {
   delayMs?: number;
 }
 
-function normalizeMochiColor(hex: string): string {
-  const upper = hex.toUpperCase();
-  if (upper === '#FFE8F0' || upper === '#FFE8EE') return '#FBF2E6';
-  if (upper === '#EFEAFF') return '#DCE5D1';
-  return hex;
-}
-
-function normalizeAuraColor(hex: string): string {
-  const upper = hex.toUpperCase();
-  if (upper === '#FF6B8B' || upper === '#E64D70') return Pastel.coral;
-  if (upper === '#8B74FF') return Pastel.matcha;
-  return hex;
+function resolveSoftPalette(bodyHex: string): { top: string; bottom: string; shadow: string } {
+  const upper = bodyHex.toUpperCase();
+  // Matcha / mint / lavender partner -> soft mint clay
+  if (
+    upper === '#DCE5D1' ||
+    upper === '#EFEAFF' ||
+    upper === '#E1F5EC' ||
+    upper === '#D8F0E3'
+  ) {
+    return { top: '#E8F7ED', bottom: '#C2E5CE', shadow: '#BBDAC7' };
+  }
+  // Cream / rose / peach partner -> warm milky peach clay
+  return { top: '#FFF5EB', bottom: '#FFE0C7', shadow: '#EDD3C6' };
 }
 
 export const MochiMascot = React.memo(function MochiMascot({
   bodyColor,
-  auraColor,
   mood,
   size = 76,
   delayMs = 0,
 }: MochiMascotProps) {
   const isFocused = useIsFocused();
   const translateY = useSharedValue(0);
-
-  const fillHex = normalizeMochiColor(bodyColor);
-  const accentHex = normalizeAuraColor(auraColor);
+  const gradId = `mochiBody_${bodyColor.replace('#', '')}_${mood}`;
+  const palette = resolveSoftPalette(bodyColor);
 
   useEffect(() => {
     if (!isFocused) {
@@ -60,8 +58,8 @@ export const MochiMascot = React.memo(function MochiMascot({
     const timer = setTimeout(() => {
       translateY.value = withRepeat(
         withSequence(
-          withTiming(-3, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.sin) })
+          withTiming(-4, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1700, easing: Easing.inOut(Easing.sin) })
         ),
         -1,
         true
@@ -79,122 +77,152 @@ export const MochiMascot = React.memo(function MochiMascot({
   }));
 
   return (
-    <View style={[styles.wrapper, { width: size + 12, height: size + 10 }]}>
-      {/* Subtle porcelain dish shadow */}
+    <View style={[styles.wrapper, { width: size + 8, height: size + 8 }]}>
       <View
         style={[
           styles.groundShadow,
           {
-            width: size * 0.68,
-            backgroundColor: accentHex + '1F',
+            width: size * 0.64,
+            backgroundColor: palette.shadow + '66',
           },
         ]}
       />
       <Animated.View style={floatStyle}>
         <Svg width={size} height={size} viewBox="0 0 100 100">
-          {/* Hand-inked ceramic wagashi mochi silhouette */}
+          <Defs>
+            <LinearGradient id={gradId} x1="0.2" y1="0" x2="0.6" y2="1">
+              <Stop offset="0" stopColor={palette.top} />
+              <Stop offset="1" stopColor={palette.bottom} />
+            </LinearGradient>
+          </Defs>
+
+          {/* Soft borderless squishy mochi silhouette (zero dark stroke!) */}
           <Path
-            d="M15 64 C15 32, 31 20, 50 20 C69 20, 85 32, 85 64 C85 81, 71 86, 50 86 C29 86, 15 81, 15 64 Z"
-            fill={fillHex}
-            stroke={Pastel.text}
-            strokeWidth={3.2}
-            strokeLinejoin="round"
-          />
-          {/* Subtle inner rim sheen (craft stationery feel, no harsh gloss) */}
-          <Path
-            d="M27 36 C33 27, 42 25, 48 25"
-            stroke="#FFFFFF"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.7}
+            d="M12 64 C12 31, 29 18, 50 18 C71 18, 88 31, 88 64 C88 83, 73 88, 50 88 C27 88, 12 83, 12 64 Z"
+            fill={`url(#${gradId})`}
           />
 
-          {/* Soft terracotta ceramic cheeks */}
-          <Ellipse cx={30} cy={60} rx={6} ry={3.4} fill={accentHex} opacity={0.34} />
-          <Ellipse cx={70} cy={60} rx={6} ry={3.4} fill={accentHex} opacity={0.34} />
+          {/* Glossy top-left soft specular reflection */}
+          <Ellipse
+            cx={34}
+            cy={33}
+            rx={13}
+            ry={6.5}
+            fill="#FFFFFF"
+            opacity={0.55}
+            transform="rotate(-18 34 33)"
+          />
 
-          {/* Minimal serene ink expressions */}
-          {mood === 'sleepy' ? (
+          {/* Soft airbrushed rosy cheeks */}
+          <Ellipse cx={27} cy={62} rx={8} ry={4.6} fill="#FF8DA1" opacity={0.42} />
+          <Ellipse cx={73} cy={62} rx={8} ry={4.6} fill="#FF8DA1" opacity={0.42} />
+
+          {/* Mood Facial Expressions (warm espresso, delicate & clean) */}
+          {mood === 'in_love' ? (
             <>
               <Path
-                d="M32 51 Q36.5 55.5 41 51"
-                stroke={Pastel.text}
-                strokeWidth={2.8}
-                strokeLinecap="round"
-                fill="none"
+                d="M35 52 C35 48.5, 30 48.5, 30 52 C30 55.2, 35 58.2, 35 58.2 C35 58.2, 40 55.2, 40 52 C40 48.5, 35 48.5, 35 52 Z"
+                fill="#FF5C7A"
               />
               <Path
-                d="M59 51 Q63.5 55.5 68 51"
-                stroke={Pastel.text}
-                strokeWidth={2.8}
+                d="M65 52 C65 48.5, 60 48.5, 60 52 C60 55.2, 65 58.2, 65 58.2 C65 58.2, 70 55.2, 70 52 C70 48.5, 65 48.5, 65 52 Z"
+                fill="#FF5C7A"
+              />
+              <Path
+                d="M44 63 Q50 69 56 63"
+                stroke="#5A423C"
+                strokeWidth={3.2}
                 strokeLinecap="round"
                 fill="none"
               />
-              <Circle cx={50} cy={62} r={2.8} fill={Pastel.text} />
             </>
-          ) : mood === 'in_love' ? (
+          ) : mood === 'sleepy' ? (
             <>
               <Path
-                d="M32 51 Q36.5 46 41 51"
-                stroke={Pastel.text}
-                strokeWidth={2.8}
+                d="M31 55 Q37 59.5 43 55"
+                stroke="#5A423C"
+                strokeWidth={3.2}
                 strokeLinecap="round"
                 fill="none"
               />
-              <Circle cx={63.5} cy={50} r={3.4} fill={Pastel.text} />
               <Path
-                d="M50 56 C50 53.5, 46.8 53.5, 46.8 56 C46.8 58.6, 50 61, 50 61 C50 61, 53.2 58.6, 53.2 56 C53.2 53.5, 50 53.5, 50 56 Z"
-                fill={Pastel.coral}
+                d="M57 55 Q63 59.5 69 55"
+                stroke="#5A423C"
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                fill="none"
+              />
+              <Circle cx={50} cy={65} r={3.2} fill="#5A423C" opacity={0.75} />
+            </>
+          ) : mood === 'miss_you' ? (
+            <>
+              <Circle cx={37} cy={53} r={4.8} fill="#5A423C" />
+              <Circle cx={38.5} cy={51.3} r={1.6} fill="#FFFFFF" />
+              <Circle cx={63} cy={53} r={4.8} fill="#5A423C" />
+              <Circle cx={64.5} cy={51.3} r={1.6} fill="#FFFFFF" />
+              <Path
+                d="M46 66 Q50 63 54 66"
+                stroke="#5A423C"
+                strokeWidth={3}
+                strokeLinecap="round"
+                fill="none"
+              />
+            </>
+          ) : mood === 'hungry' ? (
+            <>
+              <Circle cx={37} cy={53} r={4.4} fill="#5A423C" />
+              <Circle cx={38.5} cy={51.5} r={1.4} fill="#FFFFFF" />
+              <Circle cx={63} cy={53} r={4.4} fill="#5A423C" />
+              <Circle cx={64.5} cy={51.5} r={1.4} fill="#FFFFFF" />
+              <Path
+                d="M44 62 Q50 72 56 62 Z"
+                fill="#FF6F88"
               />
             </>
           ) : mood === 'chaotic' ? (
             <>
-              <Circle cx={36.5} cy={50} r={3.8} fill={Pastel.text} />
               <Path
-                d="M59 47 L67 50.5 L59 54"
-                stroke={Pastel.text}
-                strokeWidth={2.8}
+                d="M32 50 L41 54 L32 58"
+                stroke="#5A423C"
+                strokeWidth={3.2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
               />
               <Path
-                d="M43 62 Q46.5 58.5 50 62 Q53.5 65.5 57 62"
-                stroke={Pastel.text}
-                strokeWidth={2.6}
+                d="M68 50 L59 54 L68 58"
+                stroke="#5A423C"
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <Path
+                d="M44 64 Q47 67.5 50 64 Q53 67.5 56 64"
+                stroke="#5A423C"
+                strokeWidth={2.8}
                 strokeLinecap="round"
                 fill="none"
               />
             </>
           ) : (
             <>
-              <Circle cx={36.5} cy={50} r={3.4} fill={Pastel.text} />
-              <Circle cx={63.5} cy={50} r={3.4} fill={Pastel.text} />
-              {mood === 'miss_you' ? (
-                <Path
-                  d="M45.5 63.5 Q50 59.5 54.5 63.5"
-                  stroke={Pastel.text}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              ) : mood === 'hungry' ? (
-                <Path
-                  d="M44.5 60 Q50 67.5 55.5 60 Z"
-                  fill={Pastel.coral}
-                  stroke={Pastel.text}
-                  strokeWidth={2.2}
-                />
-              ) : (
-                <Path
-                  d="M45 60 Q50 64.5 55 60"
-                  stroke={Pastel.text}
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              )}
+              <Circle cx={37} cy={53} r={4.4} fill="#5A423C" />
+              <Circle cx={38.5} cy={51.5} r={1.5} fill="#FFFFFF" />
+              <Path
+                d="M58 54 Q63 49 68 54"
+                stroke="#5A423C"
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                fill="none"
+              />
+              <Path
+                d="M45 62 Q50 67.5 55 62"
+                stroke="#5A423C"
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                fill="none"
+              />
             </>
           )}
         </Svg>
@@ -210,7 +238,7 @@ const styles = StyleSheet.create({
   },
   groundShadow: {
     position: 'absolute',
-    bottom: 3,
+    bottom: 2,
     height: 8,
     borderRadius: 999,
   },

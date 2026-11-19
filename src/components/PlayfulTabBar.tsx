@@ -4,19 +4,14 @@ import {
   Heart,
   MapPin,
   MessageCircle,
-  NotebookPen,
+  StickyNote,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Keyboard, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
-import {
-  BodyFontBold,
-  MonoFontBold,
-  Pastel,
-  RoundedFont,
-} from '@/constants/pastelTheme';
+import { BodyFontBold, BodyFontSemi, Pastel } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 
 interface TabBarProps {
@@ -36,38 +31,38 @@ interface TabBarProps {
 }
 
 const TAB_LABELS: Record<string, string> = {
-  index: 'Beranda',
+  index: 'Home',
   chat: 'Chat',
-  memories: 'Kenangan',
+  memories: 'Album',
   lokasi: 'Lokasi',
   dates: 'Kencan',
-  notes: 'Catatan',
+  notes: 'Notes',
 };
 
 function renderTabIcon(name: string, color: string, focused: boolean) {
-  const strokeWidth = focused ? 2.1 : 1.7;
+  const strokeWidth = focused ? 2.2 : 1.8;
   switch (name) {
     case 'index':
       return (
         <Heart
-          size={18}
+          size={19}
           color={color}
           strokeWidth={strokeWidth}
           fill={focused ? color : 'none'}
         />
       );
     case 'chat':
-      return <MessageCircle size={18} color={color} strokeWidth={strokeWidth} />;
+      return <MessageCircle size={19} color={color} strokeWidth={strokeWidth} />;
     case 'memories':
-      return <Camera size={18} color={color} strokeWidth={strokeWidth} />;
+      return <Camera size={19} color={color} strokeWidth={strokeWidth} />;
     case 'lokasi':
-      return <MapPin size={18} color={color} strokeWidth={strokeWidth} />;
+      return <MapPin size={19} color={color} strokeWidth={strokeWidth} />;
     case 'dates':
-      return <Calendar size={18} color={color} strokeWidth={strokeWidth} />;
+      return <Calendar size={19} color={color} strokeWidth={strokeWidth} />;
     case 'notes':
-      return <NotebookPen size={18} color={color} strokeWidth={strokeWidth} />;
+      return <StickyNote size={19} color={color} strokeWidth={strokeWidth} />;
     default:
-      return <Heart size={18} color={color} strokeWidth={strokeWidth} />;
+      return <Heart size={19} color={color} strokeWidth={strokeWidth} />;
   }
 }
 
@@ -125,15 +120,11 @@ export const PlayfulTabBar = React.memo(function PlayfulTabBar({
             <BouncyPressable
               key={route.key}
               onPress={onPress}
-              scaleTo={0.94}
+              scaleTo={0.93}
               style={styles.tabItem}
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}>
-              <View style={styles.activeMarkerSlot}>
-                {isFocused ? <View style={styles.activeBar} /> : null}
-              </View>
-
-              <View style={styles.iconWrap}>
+              <View style={[styles.iconPill, isFocused && styles.iconPillActive]}>
                 {renderTabIcon(route.name, iconColor, isFocused)}
                 {route.name === 'chat' && unreadChatCount > 0 ? (
                   <View style={styles.badge}>
@@ -166,69 +157,70 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(252, 251, 248, 0.96)',
-    borderTopWidth: 1,
-    borderTopColor: Pastel.borderStrong,
+    backgroundColor: Pastel.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 8,
     alignItems: 'center',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 10,
   },
   dockInner: {
     width: '100%',
     maxWidth: 540,
     flexDirection: 'row',
-    paddingHorizontal: 6,
-    paddingTop: 2,
+    paddingHorizontal: 8,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 6,
-    gap: 3,
+    paddingVertical: 2,
+    gap: 4,
   },
-  activeMarkerSlot: {
-    height: 4,
-    width: '100%',
+  iconPill: {
+    width: 44,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginBottom: 4,
-  },
-  activeBar: {
-    width: 22,
-    height: 2.5,
-    borderRadius: 999,
-    backgroundColor: Pastel.coral,
-  },
-  iconWrap: {
+    justifyContent: 'center',
     position: 'relative',
+  },
+  iconPillActive: {
+    backgroundColor: Pastel.coralSoft,
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -9,
-    minWidth: 15,
-    height: 15,
+    top: -1,
+    right: 2,
+    minWidth: 16,
+    height: 16,
     borderRadius: 8,
     backgroundColor: Pastel.coral,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: Pastel.white,
   },
   badgeText: {
-    fontFamily: MonoFontBold,
-    fontSize: 8.5,
+    fontFamily: BodyFontBold,
+    fontSize: 9.5,
+    lineHeight: 13,
     color: Pastel.pureWhite,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
+    lineHeight: 15,
+    textAlign: 'center',
   },
   tabLabelFocused: {
     fontFamily: BodyFontBold,
-    color: Pastel.text,
+    color: Pastel.coralDark,
   },
   tabLabelMuted: {
-    fontFamily: RoundedFont,
+    fontFamily: BodyFontSemi,
     color: Pastel.textSoft,
   },
 });

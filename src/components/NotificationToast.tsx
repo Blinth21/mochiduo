@@ -37,7 +37,6 @@ export const NotificationToast = React.memo(function NotificationToast() {
           }
         }}
         style={styles.toast}>
-        <View style={styles.accentRule} />
         <View style={styles.emojiBubble}>
           <Text style={styles.emoji}>{activeToast.emoji}</Text>
         </View>
@@ -60,8 +59,8 @@ export const NotificationToast = React.memo(function NotificationToast() {
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    left: 14,
-    right: 14,
+    left: 16,
+    right: 16,
     zIndex: 999,
     alignItems: 'center',
   },
@@ -70,56 +69,49 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: Pastel.bgElevated,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    shadowColor: '#1F1B18',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
+    gap: 11,
+    backgroundColor: Pastel.white,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
     elevation: 9,
   },
-  accentRule: {
-    width: 3,
-    alignSelf: 'stretch',
-    borderRadius: 999,
-    backgroundColor: Pastel.coral,
-  },
   emojiBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: Pastel.bgMuted,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Pastel.coralSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emoji: {
-    fontSize: 17,
+    fontSize: 18,
   },
   copy: {
     flex: 1,
-    gap: 1,
+    gap: 2,
   },
   title: {
     fontFamily: BodyFontBold,
-    fontSize: 13,
+    fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.text,
   },
   body: {
     fontFamily: RoundedFont,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 17,
     color: Pastel.textMuted,
-    lineHeight: 16,
   },
   closeBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: Pastel.bg,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },

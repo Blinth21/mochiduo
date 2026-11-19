@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import {
   ArrowLeftRight,
-  ArrowUpRight,
   Bell,
+  ChevronRight,
   Cloud,
   Heart,
   MapPin,
@@ -39,15 +39,14 @@ import { MochiMascot } from '@/components/MochiMascot';
 import { NotificationCenterModal } from '@/components/NotificationCenterModal';
 import {
   BodyFontBold,
+  BodyFontRegular,
   BodyFontSemi,
   MOOD_OPTIONS,
-  MonoFont,
-  MonoFontBold,
   NOTE_PALETTES,
   Pastel,
   RoundedFont,
-  SerifFont,
-  SerifFontSemi,
+  SoftShadow,
+  SoftShadowSm,
 } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { MoodId } from '@/types/couple';
@@ -238,20 +237,22 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
         <View style={styles.centerColumn}>
-          {/* Editorial Masthead & Brand Mark */}
+          {/* Airy Borderless Top Header */}
           <View style={styles.headerRow}>
-            <MochiBrandMark
-              size={34}
-              showWordmark
-              subtitle={`Hai, ${activePartner.nickname}`}
-            />
+            <View style={styles.brandWrap}>
+              <MochiBrandMark
+                size={36}
+                showWordmark
+                subtitle={`Hai, ${activePartner.nickname}`}
+              />
+            </View>
 
             <View style={styles.headerActions}>
               <BouncyPressable
                 onPress={() => setNotifModalVisible(true)}
-                style={styles.iconBtn}
+                style={[styles.circleBtn, SoftShadowSm]}
                 accessibilityLabel="Pusat Notifikasi">
-                <Bell size={15} color={Pastel.text} />
+                <Bell size={17} color={Pastel.text} />
                 {unreadNotifCount > 0 ? (
                   <View style={styles.bellBadge}>
                     <Text style={styles.bellBadgeText}>
@@ -263,178 +264,168 @@ export default function HomeScreen() {
 
               <BouncyPressable
                 onPress={() => setSyncModalVisible(true)}
-                style={[styles.utilityChip, isLive && styles.utilityChipLive]}>
-                <Cloud size={13} color={isLive ? Pastel.matcha : Pastel.textMuted} />
-                <Text
-                  style={[
-                    styles.utilityChipText,
-                    isLive && { color: Pastel.matcha },
-                  ]}>
-                  {isLive ? 'Live' : '2 HP'}
-                </Text>
+                style={[
+                  styles.circleBtn,
+                  SoftShadowSm,
+                  isLive && styles.circleBtnLive,
+                ]}
+                accessibilityLabel="Live Sync 2 HP">
+                <Cloud size={17} color={isLive ? Pastel.matcha : Pastel.textMuted} />
+                {isLive ? <View style={styles.liveDot} /> : null}
               </BouncyPressable>
 
-              <BouncyPressable onPress={handleTogglePartner} style={styles.switchPill}>
-                <ArrowLeftRight size={12} color={Pastel.text} />
-                <Text style={styles.switchPillText}>{activePartner.name}</Text>
+              <BouncyPressable
+                onPress={handleTogglePartner}
+                style={[styles.switchPill, SoftShadowSm]}>
+                <ArrowLeftRight size={13} color={Pastel.coral} />
+                <Text style={styles.switchPillText} numberOfLines={1}>
+                  {activePartner.name}
+                </Text>
               </BouncyPressable>
             </View>
           </View>
 
-          {/* 1. Commemorative Anniversary Ledger */}
+          {/* 1. Cheerful Coral Anniversary Hero */}
           <AnniversaryBanner onPressEdit={openEditModal} />
 
-          {/* 2. Duo Mochi Dispatch Card */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleGroup}>
-                <Text style={styles.sectionKicker}>02</Text>
-                <Text style={styles.sectionTitle}>Mood &amp; Kabar Kalian</Text>
-              </View>
-              <View style={styles.hugCountStamp}>
-                <Text style={styles.hugCountText}>{hugCount} PELUKAN</Text>
-              </View>
-            </View>
-
-            <View style={styles.duoGrid}>
-              {/* Partner 1 Column */}
-              <View
-                style={[
-                  styles.mochiCard,
-                  activePartnerId === 'p1' && styles.mochiCardActive,
-                ]}>
-                <View style={styles.mochiNameRow}>
-                  <Text style={styles.mochiName} numberOfLines={1}>
-                    {p1.name}
-                  </Text>
-                  <View
-                    style={[
-                      styles.moodTag,
-                      {
-                        backgroundColor: p1MoodObj.bg,
-                        borderColor: p1MoodObj.accent + '44',
-                      },
-                    ]}>
-                    <Text style={[styles.moodTagText, { color: p1MoodObj.accent }]}>
-                      {p1MoodObj.label}
-                    </Text>
+          {/* 2. Side-by-Side Soft Bento Partner Cards */}
+          <View style={styles.duoGrid}>
+            {/* Partner 1 Bento Card */}
+            <View style={[styles.partnerBento, SoftShadow]}>
+              <View style={styles.partnerTopRow}>
+                <Text style={styles.partnerName} numberOfLines={1}>
+                  {p1.name}
+                </Text>
+                {activePartnerId === 'p1' ? (
+                  <View style={styles.youBadge}>
+                    <Text style={styles.youBadgeText}>Kamu</Text>
                   </View>
-                </View>
+                ) : null}
+              </View>
 
+              <View style={styles.mascotStage}>
                 <MochiMascot
                   bodyColor={p1.mochiColor}
                   auraColor={p1.auraColor}
                   mood={p1.mood}
-                  size={74}
+                  size={80}
                 />
-
-                <View style={styles.statusBubble}>
-                  <Text style={styles.statusBubbleText} numberOfLines={3}>
-                    “{p1.statusText}”
-                  </Text>
-                  <Text style={styles.updatedTime}>
-                    {formatRelativeTime(p1.updatedAt)}
-                  </Text>
-                </View>
               </View>
 
-              {/* Partner 2 Column */}
-              <View
-                style={[
-                  styles.mochiCard,
-                  activePartnerId === 'p2' && styles.mochiCardActive,
-                ]}>
-                <View style={styles.mochiNameRow}>
-                  <Text style={styles.mochiName} numberOfLines={1}>
-                    {p2.name}
-                  </Text>
-                  <View
-                    style={[
-                      styles.moodTag,
-                      {
-                        backgroundColor: p2MoodObj.bg,
-                        borderColor: p2MoodObj.accent + '44',
-                      },
-                    ]}>
-                    <Text style={[styles.moodTagText, { color: p2MoodObj.accent }]}>
-                      {p2MoodObj.label}
-                    </Text>
-                  </View>
-                </View>
+              <View style={[styles.moodPill, { backgroundColor: p1MoodObj.bg }]}>
+                <Text style={styles.moodPillEmoji}>{p1MoodObj.emoji}</Text>
+                <Text style={[styles.moodPillLabel, { color: p1MoodObj.accent }]}>
+                  {p1MoodObj.label}
+                </Text>
+              </View>
 
+              <View style={styles.quotePill}>
+                <Text style={styles.quoteText} numberOfLines={3}>
+                  “{p1.statusText}”
+                </Text>
+                <Text style={styles.quoteTime}>{formatRelativeTime(p1.updatedAt)}</Text>
+              </View>
+            </View>
+
+            {/* Partner 2 Bento Card */}
+            <View style={[styles.partnerBento, SoftShadow]}>
+              <View style={styles.partnerTopRow}>
+                <Text style={styles.partnerName} numberOfLines={1}>
+                  {p2.name}
+                </Text>
+                {activePartnerId === 'p2' ? (
+                  <View style={styles.youBadge}>
+                    <Text style={styles.youBadgeText}>Kamu</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.mascotStage}>
                 <MochiMascot
                   bodyColor={p2.mochiColor}
                   auraColor={p2.auraColor}
                   mood={p2.mood}
-                  size={74}
-                  delayMs={500}
+                  size={80}
+                  delayMs={450}
                 />
-
-                <View style={styles.statusBubble}>
-                  <Text style={styles.statusBubbleText} numberOfLines={3}>
-                    “{p2.statusText}”
-                  </Text>
-                  <Text style={styles.updatedTime}>
-                    {formatRelativeTime(p2.updatedAt)}
-                  </Text>
-                </View>
               </View>
-            </View>
 
-            {/* Tactile Hanko Hug Stamp Button */}
-            <View style={styles.hugRow}>
-              <Animated.View style={[styles.burstFloat, burstAnim]} pointerEvents="none">
-                <Text style={styles.burstText}>+1 Pelukan Hangat</Text>
-              </Animated.View>
-
-              <BouncyPressable onPress={handleSendHug} style={styles.hugButton} scaleTo={0.96}>
-                <Animated.View style={hugIconAnim}>
-                  <Heart size={16} color={Pastel.pureWhite} fill={Pastel.pureWhite} />
-                </Animated.View>
-                <Text style={styles.hugButtonText}>
-                  Kirim Peluk ke {partnerOther.name}
+              <View style={[styles.moodPill, { backgroundColor: p2MoodObj.bg }]}>
+                <Text style={styles.moodPillEmoji}>{p2MoodObj.emoji}</Text>
+                <Text style={[styles.moodPillLabel, { color: p2MoodObj.accent }]}>
+                  {p2MoodObj.label}
                 </Text>
-              </BouncyPressable>
+              </View>
 
-              {lastHugSenderName && lastHugAt ? (
-                <Text style={styles.lastHugHint}>
-                  Terakhir dari {lastHugSenderName} · {formatRelativeTime(lastHugAt)}
+              <View style={styles.quotePill}>
+                <Text style={styles.quoteText} numberOfLines={3}>
+                  “{p2.statusText}”
                 </Text>
-              ) : null}
+                <Text style={styles.quoteTime}>{formatRelativeTime(p2.updatedAt)}</Text>
+              </View>
             </View>
           </View>
 
-          {/* 3. Compact Cartographic Distance Strip */}
+          {/* 3. Joyful Tactile Send Hug Action */}
+          <View style={styles.hugSection}>
+            <Animated.View style={[styles.burstFloat, burstAnim]} pointerEvents="none">
+              <Text style={styles.burstText}>+1 Pelukan Hangat 🫂</Text>
+            </Animated.View>
+
+            <BouncyPressable
+              onPress={handleSendHug}
+              style={styles.hugButton}
+              scaleTo={0.96}>
+              <View style={styles.hugBtnLeft}>
+                <Animated.View style={hugIconAnim}>
+                  <Heart size={18} color={Pastel.pureWhite} fill={Pastel.pureWhite} />
+                </Animated.View>
+                <Text style={styles.hugButtonText} numberOfLines={1}>
+                  Kirim Peluk ke {partnerOther.name}
+                </Text>
+              </View>
+              <View style={styles.hugCounterPill}>
+                <Text style={styles.hugCounterText}>{hugCount}</Text>
+              </View>
+            </BouncyPressable>
+
+            {lastHugSenderName && lastHugAt ? (
+              <Text style={styles.lastHugHint}>
+                Pelukan terakhir dari {lastHugSenderName} · {formatRelativeTime(lastHugAt)}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* 4. Clean Borderless Location Bento Strip */}
           <BouncyPressable
             onPress={() => router.push('/lokasi')}
-            style={styles.locationStrip}>
+            style={[styles.locationStrip, SoftShadow]}>
             <View style={styles.locationIconWrap}>
-              <MapPin size={17} color={Pastel.matcha} />
+              <MapPin size={19} color={Pastel.matcha} />
             </View>
             <View style={styles.locationInfo}>
               <View style={styles.locationTitleRow}>
                 <Text style={styles.locationTitle}>Lokasi Berdua</Text>
-                <Text style={styles.locationDistMono}>{distanceLabel}</Text>
+                <View style={styles.distancePill}>
+                  <Text style={styles.distancePillText}>{distanceLabel}</Text>
+                </View>
               </View>
               <Text style={styles.locationSub} numberOfLines={1}>
                 {partnerLoc.isSharing
-                  ? `${partnerOther.name}: ${partnerLoc.areaName}`
+                  ? `${partnerOther.name} di ${partnerLoc.areaName}`
                   : `${partnerOther.name} mengaktifkan mode privasi`}
               </Text>
             </View>
             <View style={styles.locationArrowWrap}>
-              <ArrowUpRight size={16} color={Pastel.textMuted} />
+              <ChevronRight size={18} color={Pastel.textMuted} />
             </View>
           </BouncyPressable>
 
-          {/* 4. Quick Mood & Status Composer */}
-          <View style={styles.card}>
-            <View style={styles.sectionTitleGroup}>
-              <Text style={styles.sectionKicker}>03</Text>
-              <Text style={styles.sectionTitle}>
-                Perbarui Kabar {activePartner.name}
-              </Text>
-            </View>
+          {/* 5. Soft Mood & Status Composer Bento */}
+          <View style={[styles.composerCard, SoftShadow]}>
+            <Text style={styles.composerHeading}>
+              Apa kabar {activePartner.name} sekarang?
+            </Text>
 
             <ScrollView
               horizontal
@@ -449,25 +440,14 @@ export default function HomeScreen() {
                     style={[
                       styles.moodChip,
                       selected
-                        ? {
-                            backgroundColor: mood.bg,
-                            borderColor: mood.accent,
-                          }
-                        : {
-                            backgroundColor: Pastel.bg,
-                            borderColor: Pastel.border,
-                          },
+                        ? { backgroundColor: mood.bg }
+                        : { backgroundColor: Pastel.bgMuted },
                     ]}>
-                    <View
-                      style={[
-                        styles.moodDot,
-                        { backgroundColor: selected ? mood.accent : Pastel.borderStrong },
-                      ]}
-                    />
+                    <Text style={styles.moodChipEmoji}>{mood.emoji}</Text>
                     <Text
                       style={[
                         styles.moodChipLabel,
-                        selected && { color: Pastel.text, fontFamily: BodyFontBold },
+                        selected && { color: mood.accent, fontFamily: BodyFontBold },
                       ]}>
                       {mood.label}
                     </Text>
@@ -498,28 +478,25 @@ export default function HomeScreen() {
                   styles.sendStatusBtn,
                   !statusInput.trim() && { opacity: 0.45 },
                 ]}>
-                <Send size={15} color={Pastel.pureWhite} />
+                <Send size={16} color={Pastel.pureWhite} />
               </BouncyPressable>
             </View>
           </View>
 
-          {/* 5. Pinned Stationery Love Note */}
+          {/* 6. Soft Pastel Pinned Love Note Card */}
           {pinnedNote ? (
             <BouncyPressable
               onPress={() => router.push('/notes')}
               style={[
                 styles.pinnedCard,
-                {
-                  backgroundColor: pinnedPalette.bg,
-                  borderColor: pinnedPalette.border,
-                },
+                SoftShadowSm,
+                { backgroundColor: pinnedPalette.bg },
               ]}>
               <View style={styles.pinnedTop}>
-                <View style={styles.pinnedBadge}>
+                <View style={styles.pinnedAuthorPill}>
                   <Pin size={12} color={pinnedPalette.accent} />
                   <Text style={[styles.pinnedBadgeText, { color: pinnedPalette.accent }]}>
-                    CATATAN DISEMATKAN · DARI{' '}
-                    {(pinnedNote.authorId === 'p1' ? p1.name : p2.name).toUpperCase()}
+                    Catatan dari {pinnedNote.authorId === 'p1' ? p1.name : p2.name}
                   </Text>
                 </View>
                 <Text style={styles.pinnedSticker}>{pinnedNote.sticker}</Text>
@@ -528,7 +505,7 @@ export default function HomeScreen() {
               <Text style={styles.pinnedMessage}>“{pinnedNote.message}”</Text>
 
               <View style={styles.pinnedFooter}>
-                <Text style={styles.pinnedHint}>Buka papan Love Notes →</Text>
+                <Text style={styles.pinnedHint}>Lihat semua Love Notes</Text>
                 {pinnedNote.reaction ? (
                   <View style={styles.reactionPill}>
                     <Text style={styles.reactionText}>{pinnedNote.reaction}</Text>
@@ -566,7 +543,7 @@ export default function HomeScreen() {
             style={styles.modalInput}
           />
 
-          <Text style={styles.inputLabel}>Tanggal Jadian (Kalender atau Ketik)</Text>
+          <Text style={styles.inputLabel}>Tanggal Jadian</Text>
           <DatePickerField
             value={formDate}
             onChange={setFormDate}
@@ -639,259 +616,256 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 112,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 118,
     alignItems: 'center',
   },
   centerColumn: {
     width: '100%',
     maxWidth: 520,
-    gap: 14,
+    gap: 16,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    paddingBottom: 4,
+    gap: 10,
+    paddingBottom: 2,
+  },
+  brandWrap: {
+    flex: 1,
+    flexShrink: 1,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
-  iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  circleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  circleBtnLive: {
+    backgroundColor: Pastel.matchaSoft,
+  },
+  liveDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Pastel.matcha,
   },
   bellBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 8,
+    top: -2,
+    right: -2,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
     backgroundColor: Pastel.coral,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: Pastel.bg,
+    paddingHorizontal: 4,
   },
   bellBadgeText: {
-    fontFamily: MonoFontBold,
-    fontSize: 8.5,
+    fontFamily: BodyFontBold,
+    fontSize: 9.5,
+    lineHeight: 13,
     color: Pastel.pureWhite,
-  },
-  utilityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 10,
-  },
-  utilityChipLive: {
-    backgroundColor: Pastel.matchaSoft,
-    borderColor: Pastel.matcha + '66',
-  },
-  utilityChipText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 11.5,
-    color: Pastel.textMuted,
   },
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: Pastel.bgMuted,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
+    gap: 6,
+    backgroundColor: Pastel.bgElevated,
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 999,
+    maxWidth: 116,
   },
   switchPillText: {
     fontFamily: BodyFontBold,
-    fontSize: 12,
-    color: Pastel.text,
-  },
-  card: {
-    backgroundColor: Pastel.bgElevated,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  sectionTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  sectionKicker: {
-    fontFamily: MonoFontBold,
-    fontSize: 11,
-    color: Pastel.coral,
-    letterSpacing: 0.8,
-  },
-  sectionTitle: {
-    fontFamily: SerifFontSemi,
-    fontSize: 18,
-    color: Pastel.text,
-  },
-  hugCountStamp: {
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    backgroundColor: Pastel.bg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  hugCountText: {
-    fontFamily: MonoFontBold,
-    fontSize: 10,
-    color: Pastel.textMuted,
-    letterSpacing: 0.6,
-  },
-  duoGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  mochiCard: {
-    flex: 1,
-    backgroundColor: Pastel.bg,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Pastel.border,
-    alignItems: 'center',
-    gap: 8,
-  },
-  mochiCardActive: {
-    borderColor: Pastel.text,
-    backgroundColor: Pastel.bgElevated,
-  },
-  mochiNameRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 4,
-  },
-  mochiName: {
-    fontFamily: BodyFontBold,
-    fontSize: 13.5,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.text,
     flexShrink: 1,
   },
-  moodTag: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
+  duoGrid: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  moodTagText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 10.5,
-  },
-  statusBubble: {
-    width: '100%',
+  partnerBento: {
+    flex: 1,
     backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.border,
-    borderRadius: 10,
-    padding: 9,
+    borderRadius: 24,
+    padding: 14,
+    alignItems: 'center',
+    gap: 10,
+  },
+  partnerTopRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  partnerName: {
+    fontFamily: BodyFontBold,
+    fontSize: 15,
+    lineHeight: 21,
+    color: Pastel.text,
+    flexShrink: 1,
+  },
+  youBadge: {
+    backgroundColor: Pastel.coralSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  youBadgeText: {
+    fontFamily: BodyFontBold,
+    fontSize: 10.5,
+    lineHeight: 15,
+    color: Pastel.coralDark,
+  },
+  mascotStage: {
+    paddingVertical: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moodPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  moodPillEmoji: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  moodPillLabel: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  quotePill: {
+    width: '100%',
+    backgroundColor: Pastel.bg,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
     gap: 4,
   },
-  statusBubbleText: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
+  quoteText: {
+    fontFamily: BodyFontRegular,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.text,
-    lineHeight: 16.5,
     textAlign: 'center',
   },
-  updatedTime: {
-    fontFamily: MonoFont,
-    fontSize: 10,
+  quoteTime: {
+    fontFamily: RoundedFont,
+    fontSize: 10.5,
+    lineHeight: 15,
     color: Pastel.textSoft,
     textAlign: 'center',
   },
-  hugRow: {
+  hugSection: {
     alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
+    gap: 8,
   },
   burstFloat: {
     position: 'absolute',
-    top: -18,
+    top: -22,
     zIndex: 10,
   },
   burstText: {
     fontFamily: BodyFontBold,
-    fontSize: 12.5,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.coral,
   },
   hugButton: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     backgroundColor: Pastel.coral,
-    paddingVertical: 13,
-    borderRadius: 12,
+    paddingLeft: 18,
+    paddingRight: 10,
+    paddingVertical: 12,
+    borderRadius: 999,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#FF5C7A',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.28,
+        shadowRadius: 16,
+      },
+      android: { elevation: 3 },
+      default: {},
+    }),
+  },
+  hugBtnLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   hugButtonText: {
     fontFamily: BodyFontBold,
-    fontSize: 14,
+    fontSize: 14.5,
+    lineHeight: 20,
+    color: Pastel.pureWhite,
+    flexShrink: 1,
+  },
+  hugCounterPill: {
+    backgroundColor: 'rgba(255,255,255,0.24)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  hugCounterText: {
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.pureWhite,
   },
   lastHugHint: {
-    fontFamily: MonoFont,
-    fontSize: 10.5,
+    fontFamily: RoundedFont,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   locationStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: Pastel.bgMuted,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 24,
+    padding: 14,
   },
   locationIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Pastel.matchaSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   locationInfo: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   locationTitleRow: {
     flexDirection: 'row',
@@ -900,106 +874,128 @@ const styles = StyleSheet.create({
   },
   locationTitle: {
     fontFamily: BodyFontBold,
-    fontSize: 13.5,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.text,
   },
-  locationDistMono: {
-    fontFamily: MonoFontBold,
+  distancePill: {
+    backgroundColor: Pastel.matchaSoft,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  distancePillText: {
+    fontFamily: BodyFontBold,
     fontSize: 11.5,
+    lineHeight: 16,
     color: Pastel.matcha,
   },
   locationSub: {
-    fontFamily: RoundedFont,
-    fontSize: 12,
+    fontFamily: BodyFontRegular,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.textMuted,
   },
   locationArrowWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.border,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  composerCard: {
+    backgroundColor: Pastel.bgElevated,
+    borderRadius: 24,
+    padding: 16,
+    gap: 12,
+  },
+  composerHeading: {
+    fontFamily: BodyFontBold,
+    fontSize: 15.5,
+    lineHeight: 22,
+    color: Pastel.text,
+  },
   moodList: {
-    gap: 7,
+    gap: 8,
     paddingVertical: 2,
   },
   moodChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 999,
   },
-  moodDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+  moodChipEmoji: {
+    fontSize: 14,
+    lineHeight: 19,
   },
   moodChipLabel: {
     fontFamily: BodyFontSemi,
-    fontSize: 12.5,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.textMuted,
   },
   statusInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   statusInput: {
     flex: 1,
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     fontFamily: RoundedFont,
-    fontSize: 13.5,
+    fontSize: 14,
+    lineHeight: 20,
     color: Pastel.text,
   },
   sendStatusBtn: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: Pastel.text,
+    borderRadius: 22,
+    backgroundColor: Pastel.coral,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pinnedCard: {
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    gap: 8,
+    borderRadius: 24,
+    padding: 18,
+    gap: 10,
   },
   pinnedTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
-  pinnedBadge: {
+  pinnedAuthorPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
   pinnedBadgeText: {
-    fontFamily: MonoFontBold,
-    fontSize: 10,
-    letterSpacing: 0.6,
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 17,
   },
   pinnedSticker: {
-    fontSize: 18,
+    fontSize: 22,
+    lineHeight: 28,
   },
   pinnedMessage: {
-    fontFamily: SerifFont,
-    fontSize: 16.5,
+    fontFamily: BodyFontSemi,
+    fontSize: 15.5,
+    lineHeight: 24,
     color: Pastel.text,
-    lineHeight: 23,
   },
   pinnedFooter: {
     flexDirection: 'row',
@@ -1009,19 +1005,19 @@ const styles = StyleSheet.create({
   },
   pinnedHint: {
     fontFamily: BodyFontSemi,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.textMuted,
   },
   reactionPill: {
     backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.border,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   reactionText: {
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 19,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1030,37 +1026,38 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    fontFamily: SerifFontSemi,
+    fontFamily: BodyFontBold,
     fontSize: 20,
+    lineHeight: 28,
     color: Pastel.text,
   },
   modalCloseBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Pastel.bgMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalBody: {
     gap: 10,
-    paddingBottom: 18,
+    paddingBottom: 20,
   },
   inputLabel: {
     fontFamily: BodyFontSemi,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 19,
     color: Pastel.textMuted,
     marginTop: 4,
   },
   modalInput: {
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    backgroundColor: Pastel.bgMuted,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontFamily: RoundedFont,
-    fontSize: 14,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.text,
   },
   modalTwoCol: {
@@ -1073,14 +1070,15 @@ const styles = StyleSheet.create({
   },
   saveModalBtn: {
     backgroundColor: Pastel.coral,
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 12,
   },
   saveModalBtnText: {
     fontFamily: BodyFontBold,
-    fontSize: 14.5,
+    fontSize: 15,
+    lineHeight: 21,
     color: Pastel.pureWhite,
   },
 });

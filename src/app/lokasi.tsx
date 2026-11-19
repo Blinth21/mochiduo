@@ -29,12 +29,12 @@ import { CoupleLocationRadar } from '@/components/CoupleLocationRadar';
 import { LiveSyncModal } from '@/components/LiveSyncModal';
 import {
   BodyFontBold,
+  BodyFontRegular,
   BodyFontSemi,
-  MonoFont,
-  MonoFontBold,
   Pastel,
   RoundedFont,
-  SerifFontSemi,
+  SoftShadow,
+  SoftShadowSm,
 } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import { formatRelativeTime } from '@/utils/dateCalc';
@@ -169,10 +169,10 @@ export default function LokasiScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <View style={styles.centerColumn}>
-          {/* Editorial Header */}
+          {/* Airy Header */}
           <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pageTitle}>Peta & Radar Lokasi</Text>
+            <View style={styles.headerCopy}>
+              <Text style={styles.pageTitle}>Lokasi Berdua</Text>
               <View style={styles.statusSubRow}>
                 <View
                   style={[
@@ -185,21 +185,25 @@ export default function LokasiScreen() {
                     },
                   ]}
                 />
-                <Text style={styles.pageSub}>
+                <Text style={styles.pageSub} numberOfLines={1}>
                   {liveWatchEnabled && myLoc.isSharing
-                    ? 'GPS REAL-TIME AKTIF • TIAP 5 DTK / 10M'
-                    : 'MODE HEMAT • UPDATE MANUAL'}
+                    ? 'GPS Real-Time aktif · tiap 5 dtk'
+                    : 'Mode hemat · update manual'}
                 </Text>
               </View>
             </View>
 
-            <BouncyPressable onPress={handleSwitchPartner} style={styles.switchPill}>
-              <ArrowLeftRight size={13} color={Pastel.text} />
-              <Text style={styles.switchPillText}>{me.name}</Text>
+            <BouncyPressable
+              onPress={handleSwitchPartner}
+              style={[styles.switchPill, SoftShadowSm]}>
+              <ArrowLeftRight size={13} color={Pastel.coral} />
+              <Text style={styles.switchPillText} numberOfLines={1}>
+                {me.name}
+              </Text>
             </BouncyPressable>
           </View>
 
-          {/* View Mode Switcher: Peta Maps vs Radar Kompas */}
+          {/* Borderless Pill Segmented Switch: Peta vs Radar */}
           <View style={styles.viewSwitchRow}>
             <BouncyPressable
               onPress={() => {
@@ -208,11 +212,11 @@ export default function LokasiScreen() {
               }}
               style={[
                 styles.viewSwitchBtn,
-                viewMode === 'map' && styles.viewSwitchBtnActive,
+                viewMode === 'map' && [styles.viewSwitchBtnActive, SoftShadowSm],
               ]}>
               <MapIcon
-                size={14}
-                color={viewMode === 'map' ? Pastel.pureWhite : Pastel.textMuted}
+                size={15}
+                color={viewMode === 'map' ? Pastel.coral : Pastel.textMuted}
               />
               <Text
                 style={[
@@ -230,18 +234,18 @@ export default function LokasiScreen() {
               }}
               style={[
                 styles.viewSwitchBtn,
-                viewMode === 'radar' && styles.viewSwitchBtnActive,
+                viewMode === 'radar' && [styles.viewSwitchBtnActive, SoftShadowSm],
               ]}>
               <Radar
-                size={14}
-                color={viewMode === 'radar' ? Pastel.pureWhite : Pastel.textMuted}
+                size={15}
+                color={viewMode === 'radar' ? Pastel.coral : Pastel.textMuted}
               />
               <Text
                 style={[
                   styles.viewSwitchText,
                   viewMode === 'radar' && styles.viewSwitchTextActive,
                 ]}>
-                Radar Kompas
+                Radar
               </Text>
             </BouncyPressable>
           </View>
@@ -263,11 +267,13 @@ export default function LokasiScreen() {
             />
           )}
 
-          {/* GPS Update & Controls Card */}
-          <View style={styles.card}>
+          {/* Soft Borderless Controls Card */}
+          <View style={[styles.card, SoftShadow]}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Kontrol Lokasi {me.name}</Text>
-              <Text style={styles.sectionMonoTag}>PERANGKAT SAYA</Text>
+              <View style={styles.deviceTagPill}>
+                <Text style={styles.deviceTagText}>HP Ini</Text>
+              </View>
             </View>
 
             <BouncyPressable
@@ -277,7 +283,7 @@ export default function LokasiScreen() {
               {isLocating ? (
                 <ActivityIndicator size="small" color={Pastel.pureWhite} />
               ) : (
-                <LocateFixed size={17} color={Pastel.pureWhite} />
+                <LocateFixed size={18} color={Pastel.pureWhite} />
               )}
               <Text style={styles.gpsButtonText}>
                 {isLocating ? 'Mengambil GPS...' : 'Update Lokasi GPS Sekarang'}
@@ -289,7 +295,7 @@ export default function LokasiScreen() {
             ) : null}
 
             {/* Quick Spot Check-in */}
-            <Text style={styles.subLabel}>CHECK-IN CEPAT</Text>
+            <Text style={styles.subLabel}>Check-in cepat</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -325,19 +331,19 @@ export default function LokasiScreen() {
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleIcon, { backgroundColor: Pastel.matchaSoft }]}>
-                  <Radio size={15} color={Pastel.matcha} />
+                  <Radio size={17} color={Pastel.matcha} />
                 </View>
                 <View style={styles.toggleCopy}>
                   <Text style={styles.toggleTitle}>GPS Real-Time Otomatis</Text>
                   <Text style={styles.toggleSub}>
-                    Aktif di semua tab (update tiap 5 dtk / pindah ≥10m)
+                    Update otomatis tiap 5 detik atau pindah ≥10m
                   </Text>
                 </View>
               </View>
               <Switch
                 value={liveWatchEnabled}
                 onValueChange={handleToggleLiveWatch}
-                trackColor={{ false: Pastel.borderStrong, true: Pastel.matcha }}
+                trackColor={{ false: Pastel.bgMuted, true: Pastel.matcha }}
                 thumbColor={Pastel.pureWhite}
               />
             </View>
@@ -348,9 +354,9 @@ export default function LokasiScreen() {
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleIcon, { backgroundColor: Pastel.taroSoft }]}>
                   {myLoc.isSharing ? (
-                    <Eye size={15} color={Pastel.taro} />
+                    <Eye size={17} color={Pastel.taro} />
                   ) : (
-                    <EyeOff size={15} color={Pastel.textMuted} />
+                    <EyeOff size={17} color={Pastel.textMuted} />
                   )}
                 </View>
                 <View style={styles.toggleCopy}>
@@ -365,21 +371,21 @@ export default function LokasiScreen() {
               <Switch
                 value={myLoc.isSharing}
                 onValueChange={() => toggleLocationSharing(activePartnerId)}
-                trackColor={{ false: Pastel.borderStrong, true: Pastel.coral }}
+                trackColor={{ false: Pastel.bgMuted, true: Pastel.coral }}
                 thumbColor={Pastel.pureWhite}
               />
             </View>
           </View>
 
-          {/* Partner Location Card */}
-          <View style={styles.partnerCard}>
+          {/* Soft Blush-Rose Borderless Partner Location Card */}
+          <View style={[styles.partnerCard, SoftShadowSm]}>
             <View style={styles.partnerTop}>
-              <View style={styles.partnerTitleWrap}>
-                <MapPin size={15} color={Pastel.coralDark} />
-                <Text style={styles.partnerTitle}>POSISI {partner.name.toUpperCase()}</Text>
+              <View style={styles.partnerPill}>
+                <MapPin size={13} color={Pastel.coralDark} />
+                <Text style={styles.partnerPillText}>Posisi {partner.name}</Text>
               </View>
               <Text style={styles.partnerTime}>
-                {formatRelativeTime(partnerLoc.updatedAt).toUpperCase()}
+                {formatRelativeTime(partnerLoc.updatedAt)}
               </Text>
             </View>
 
@@ -387,17 +393,16 @@ export default function LokasiScreen() {
               <>
                 <Text style={styles.partnerArea}>{partnerLoc.areaName}</Text>
                 <Text style={styles.partnerMeta}>
-                  {partnerLoc.spotTag ? `${partnerLoc.spotTag}  •  ` : ''}
-                  {distanceText}  •  {partnerLoc.latitude.toFixed(4)},{' '}
-                  {partnerLoc.longitude.toFixed(4)}
+                  {partnerLoc.spotTag ? `${partnerLoc.spotTag} · ` : ''}
+                  Jarak {distanceText}
                 </Text>
 
                 <BouncyPressable
                   onPress={handleOpenPartnerMaps}
-                  style={styles.mapsButton}>
-                  <ExternalLink size={14} color={Pastel.text} />
+                  style={[styles.mapsButton, SoftShadowSm]}>
+                  <ExternalLink size={15} color={Pastel.coralDark} />
                   <Text style={styles.mapsButtonText}>
-                    Buka Lokasi {partner.name} di Google Maps
+                    Buka di Google Maps
                   </Text>
                 </BouncyPressable>
               </>
@@ -408,14 +413,16 @@ export default function LokasiScreen() {
             )}
           </View>
 
-          {/* Sync Status & Setup Trigger */}
+          {/* Soft Mint Live Sync Banner */}
           <BouncyPressable
             onPress={() => setSyncModalVisible(true)}
             style={styles.infoBanner}>
-            <ShieldCheck size={16} color={Pastel.matcha} />
+            <View style={styles.infoIconCircle}>
+              <ShieldCheck size={17} color={Pastel.matcha} />
+            </View>
             <Text style={styles.infoBannerText}>
               {syncConfig.enabled && syncStatus === 'connected'
-                ? `GPS Real-Time & Live Sync 2 HP aktif (Room ${syncConfig.roomCode}). Posisi otomatis terkirim ke HP pasangan setiap pindah ≥10m.`
+                ? `GPS Real-Time & Live Sync 2 HP aktif (Room ${syncConfig.roomCode}). Posisi otomatis terkirim setiap pindah ≥10m.`
                 : 'GPS Real-Time aktif lokal. Tap di sini untuk hubungkan Live Sync antar 2 HP supaya posisi langsung muncul di HP pasangan.'}
             </Text>
           </BouncyPressable>
@@ -439,15 +446,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 112,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 118,
     alignItems: 'center',
   },
   centerColumn: {
     width: '100%',
     maxWidth: 520,
-    gap: 14,
+    gap: 16,
   },
   headerRow: {
     flexDirection: 'row',
@@ -455,9 +462,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  headerCopy: {
+    flex: 1,
+    flexShrink: 1,
+  },
   pageTitle: {
-    fontFamily: SerifFontSemi,
-    fontSize: 25,
+    fontFamily: BodyFontBold,
+    fontSize: 23,
+    lineHeight: 31,
     color: Pastel.text,
   },
   statusSubRow: {
@@ -467,23 +479,39 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusSubDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   pageSub: {
-    fontFamily: MonoFont,
-    fontSize: 10,
+    fontFamily: BodyFontRegular,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.textMuted,
-    letterSpacing: 0.5,
+    flexShrink: 1,
+  },
+  switchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Pastel.bgElevated,
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 999,
+    maxWidth: 116,
+  },
+  switchPillText: {
+    fontFamily: BodyFontBold,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Pastel.text,
+    flexShrink: 1,
   },
   viewSwitchRow: {
     flexDirection: 'row',
     backgroundColor: Pastel.bgMuted,
-    borderRadius: 10,
+    borderRadius: 999,
     padding: 4,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
     gap: 4,
   },
   viewSwitchBtn: {
@@ -492,106 +520,99 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 9,
-    borderRadius: 7,
+    paddingVertical: 10,
+    borderRadius: 999,
   },
   viewSwitchBtnActive: {
-    backgroundColor: Pastel.text,
+    backgroundColor: Pastel.bgElevated,
   },
   viewSwitchText: {
     fontFamily: BodyFontSemi,
-    fontSize: 13,
+    fontSize: 13.5,
+    lineHeight: 19,
     color: Pastel.textMuted,
   },
   viewSwitchTextActive: {
     fontFamily: BodyFontBold,
-    color: Pastel.pureWhite,
-  },
-  switchPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Pastel.bgElevated,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  switchPillText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 12.5,
     color: Pastel.text,
   },
   card: {
     backgroundColor: Pastel.bgElevated,
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    gap: 12,
+    borderRadius: 24,
+    padding: 18,
+    gap: 13,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   sectionTitle: {
-    fontFamily: SerifFontSemi,
-    fontSize: 17,
+    fontFamily: BodyFontBold,
+    fontSize: 16.5,
+    lineHeight: 23,
     color: Pastel.text,
+    flexShrink: 1,
   },
-  sectionMonoTag: {
-    fontFamily: MonoFontBold,
-    fontSize: 9.5,
-    color: Pastel.textSoft,
-    letterSpacing: 0.8,
+  deviceTagPill: {
+    backgroundColor: Pastel.bgMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  deviceTagText: {
+    fontFamily: BodyFontSemi,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: Pastel.textMuted,
   },
   gpsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Pastel.text,
-    paddingVertical: 13,
-    borderRadius: 10,
+    backgroundColor: Pastel.coral,
+    paddingVertical: 14,
+    borderRadius: 999,
   },
   gpsButtonText: {
     fontFamily: BodyFontBold,
-    fontSize: 13.5,
+    fontSize: 14.5,
+    lineHeight: 20,
     color: Pastel.pureWhite,
   },
   feedbackText: {
     fontFamily: BodyFontSemi,
     fontSize: 12.5,
+    lineHeight: 18,
     color: Pastel.matcha,
     textAlign: 'center',
   },
   subLabel: {
-    fontFamily: MonoFontBold,
-    fontSize: 10,
+    fontFamily: BodyFontSemi,
+    fontSize: 13,
+    lineHeight: 19,
     color: Pastel.textMuted,
-    letterSpacing: 0.7,
     marginTop: 2,
   },
   spotScroll: {
-    gap: 7,
+    gap: 8,
+    paddingVertical: 2,
   },
   spotChip: {
-    backgroundColor: Pastel.bg,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    backgroundColor: Pastel.bgMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
   },
   spotChipActive: {
     backgroundColor: Pastel.matchaSoft,
-    borderColor: Pastel.matcha,
   },
   spotChipText: {
     fontFamily: RoundedFont,
-    fontSize: 12.5,
+    fontSize: 13,
+    lineHeight: 18,
     color: Pastel.textMuted,
   },
   spotChipTextActive: {
@@ -612,107 +633,118 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 11,
   },
   toggleIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Pastel.border,
   },
   toggleCopy: {
     flex: 1,
   },
   toggleTitle: {
     fontFamily: BodyFontSemi,
-    fontSize: 13.5,
+    fontSize: 14,
+    lineHeight: 20,
     color: Pastel.text,
   },
   toggleSub: {
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
+    fontFamily: BodyFontRegular,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   partnerCard: {
     backgroundColor: Pastel.coralSoft,
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#E5C3B9',
-    gap: 8,
+    borderRadius: 24,
+    padding: 18,
+    gap: 9,
   },
   partnerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
-  partnerTitleWrap: {
+  partnerPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
-  partnerTitle: {
-    fontFamily: MonoFontBold,
-    fontSize: 10.5,
+  partnerPillText: {
+    fontFamily: BodyFontBold,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.coralDark,
-    letterSpacing: 0.7,
   },
   partnerTime: {
-    fontFamily: MonoFont,
-    fontSize: 10,
+    fontFamily: BodyFontRegular,
+    fontSize: 12,
+    lineHeight: 17,
     color: Pastel.textMuted,
   },
   partnerArea: {
-    fontFamily: SerifFontSemi,
-    fontSize: 19,
+    fontFamily: BodyFontBold,
+    fontSize: 18,
+    lineHeight: 25,
     color: Pastel.text,
   },
   partnerMeta: {
-    fontFamily: MonoFont,
-    fontSize: 11.5,
+    fontFamily: BodyFontRegular,
+    fontSize: 13,
+    lineHeight: 19,
     color: Pastel.textMuted,
-    lineHeight: 17,
   },
   mapsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
     backgroundColor: Pastel.bgElevated,
-    paddingVertical: 11,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Pastel.borderStrong,
+    paddingVertical: 12,
+    borderRadius: 999,
     marginTop: 4,
   },
   mapsButtonText: {
-    fontFamily: BodyFontSemi,
-    fontSize: 13,
-    color: Pastel.text,
+    fontFamily: BodyFontBold,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: Pastel.coralDark,
   },
   partnerHidden: {
-    fontFamily: RoundedFont,
-    fontSize: 13.5,
+    fontFamily: BodyFontRegular,
+    fontSize: 14,
+    lineHeight: 20,
     color: Pastel.textMuted,
   },
   infoBanner: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
+    alignItems: 'center',
+    gap: 11,
     backgroundColor: Pastel.matchaSoft,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#C2D5C7',
+    borderRadius: 20,
+    padding: 14,
+  },
+  infoIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoBannerText: {
     flex: 1,
-    fontFamily: RoundedFont,
-    fontSize: 11.5,
+    fontFamily: BodyFontRegular,
+    fontSize: 12.5,
+    lineHeight: 19,
     color: Pastel.matcha,
-    lineHeight: 17,
   },
 });
