@@ -2,9 +2,6 @@ import { FlashList } from '@shopify/flash-list';
 import { Pin, Plus, StickyNote, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
+import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
 import { NOTE_PALETTES, Pastel, RoundedFont } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { LoveNote, NoteColorId } from '@/types/couple';
@@ -267,102 +265,95 @@ export default function NotesScreen() {
       </View>
 
       {/* Write Love Note Modal */}
-      <Modal
+      <KeyboardModalSheet
         visible={modalVisible}
-        animationType="slide"
-        transparent
         onRequestClose={() => setModalVisible(false)}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Tulis Love Note Baru 💌</Text>
-              <BouncyPressable
-                onPress={() => setModalVisible(false)}
-                style={styles.modalCloseBtn}>
-                <X size={18} color={Pastel.textMuted} />
-              </BouncyPressable>
-            </View>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Tulis Love Note Baru 💌</Text>
+          <BouncyPressable
+            onPress={() => setModalVisible(false)}
+            style={styles.modalCloseBtn}>
+            <X size={18} color={Pastel.textMuted} />
+          </BouncyPressable>
+        </View>
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.modalBody}>
-              <Text style={styles.inputLabel}>Pesan Manis ({activePartner.name})</Text>
-              <TextInput
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Jangan lupa makan siang ya sayang, semangat! 💕"
-                placeholderTextColor={Pastel.textSoft}
-                style={[styles.modalInput, styles.textArea]}
-                multiline
-                maxLength={220}
-              />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.modalBody}>
+          <Text style={styles.inputLabel}>Pesan Manis ({activePartner.name})</Text>
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Jangan lupa makan siang ya sayang, semangat! 💕"
+            placeholderTextColor={Pastel.textSoft}
+            style={[styles.modalInput, styles.textArea]}
+            multiline
+            maxLength={220}
+          />
 
-              <Text style={styles.inputLabel}>Warna Sticky Note</Text>
-              <View style={styles.paletteRow}>
-                {NOTE_PALETTES.map((p) => {
-                  const selected = colorId === p.id;
-                  return (
-                    <BouncyPressable
-                      key={p.id}
-                      onPress={() => setColorId(p.id)}
-                      style={[
-                        styles.paletteSwatch,
-                        { backgroundColor: p.bg, borderColor: selected ? p.accent : p.border },
-                        selected && { borderWidth: 2.5 },
-                      ]}>
-                      <Text style={[styles.paletteLabel, { color: p.accent }]}>
-                        {p.label}
-                      </Text>
-                    </BouncyPressable>
-                  );
-                })}
-              </View>
-
-              <Text style={styles.inputLabel}>Pilih Stiker</Text>
-              <View style={styles.stickerRow}>
-                {NOTE_STICKERS.map((s) => (
-                  <BouncyPressable
-                    key={s}
-                    onPress={() => setSticker(s)}
-                    style={[
-                      styles.stickerBtn,
-                      sticker === s && styles.stickerBtnActive,
-                    ]}>
-                    <Text style={styles.stickerText}>{s}</Text>
-                  </BouncyPressable>
-                ))}
-              </View>
-
-              <BouncyPressable
-                onPress={() => setPinOnCreate((v) => !v)}
-                style={[
-                  styles.pinToggleRow,
-                  pinOnCreate && {
-                    backgroundColor: Pastel.taroSoft,
-                    borderColor: Pastel.taro,
-                  },
-                ]}>
-                <Pin size={15} color={pinOnCreate ? Pastel.taro : Pastel.textMuted} />
-                <Text
+          <Text style={styles.inputLabel}>Warna Sticky Note</Text>
+          <View style={styles.paletteRow}>
+            {NOTE_PALETTES.map((p) => {
+              const selected = colorId === p.id;
+              return (
+                <BouncyPressable
+                  key={p.id}
+                  onPress={() => setColorId(p.id)}
                   style={[
-                    styles.pinToggleText,
-                    pinOnCreate && { color: '#5B43D6', fontWeight: '800' },
+                    styles.paletteSwatch,
+                    { backgroundColor: p.bg, borderColor: selected ? p.accent : p.border },
+                    selected && { borderWidth: 2.5 },
                   ]}>
-                  Sematkan di halaman Beranda
-                </Text>
-              </BouncyPressable>
-
-              <BouncyPressable
-                onPress={handleCreateNote}
-                style={[styles.saveBtn, !message.trim() && { opacity: 0.5 }]}>
-                <Text style={styles.saveBtnText}>Tempel Love Note 📌</Text>
-              </BouncyPressable>
-            </ScrollView>
+                  <Text style={[styles.paletteLabel, { color: p.accent }]}>
+                    {p.label}
+                  </Text>
+                </BouncyPressable>
+              );
+            })}
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+
+          <Text style={styles.inputLabel}>Pilih Stiker</Text>
+          <View style={styles.stickerRow}>
+            {NOTE_STICKERS.map((s) => (
+              <BouncyPressable
+                key={s}
+                onPress={() => setSticker(s)}
+                style={[
+                  styles.stickerBtn,
+                  sticker === s && styles.stickerBtnActive,
+                ]}>
+                <Text style={styles.stickerText}>{s}</Text>
+              </BouncyPressable>
+            ))}
+          </View>
+
+          <BouncyPressable
+            onPress={() => setPinOnCreate((v) => !v)}
+            style={[
+              styles.pinToggleRow,
+              pinOnCreate && {
+                backgroundColor: Pastel.taroSoft,
+                borderColor: Pastel.taro,
+              },
+            ]}>
+            <Pin size={15} color={pinOnCreate ? Pastel.taro : Pastel.textMuted} />
+            <Text
+              style={[
+                styles.pinToggleText,
+                pinOnCreate && { color: '#5B43D6', fontWeight: '800' },
+              ]}>
+              Sematkan di halaman Beranda
+            </Text>
+          </BouncyPressable>
+
+          <BouncyPressable
+            onPress={handleCreateNote}
+            style={[styles.saveBtn, !message.trim() && { opacity: 0.5 }]}>
+            <Text style={styles.saveBtnText}>Tempel Love Note 📌</Text>
+          </BouncyPressable>
+        </ScrollView>
+      </KeyboardModalSheet>
     </SafeAreaView>
   );
 }

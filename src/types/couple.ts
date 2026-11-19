@@ -78,3 +78,49 @@ export interface SyncConfig {
   roomCode: string;
   enabled: boolean;
 }
+
+export interface ChatMessage {
+  id: string;
+  senderId: PartnerId;
+  text: string;
+  sticker?: string;
+  imageUri?: string;
+  replyToId?: string;
+  replyToSender?: PartnerId;
+  replyToPreview?: string;
+  reaction?: string;
+  status: 'sent' | 'delivered' | 'read';
+  createdAt: number;
+}
+
+export type NotificationCategory =
+  | 'chat'
+  | 'hug'
+  | 'mood'
+  | 'notes'
+  | 'memories'
+  | 'dates'
+  | 'location'
+  | 'anniversary';
+
+export interface NotificationPrefs {
+  enabled: boolean;
+  chat: boolean;
+  hugAndMood: boolean;
+  notes: boolean;
+  memories: boolean;
+  dates: boolean;
+  location: boolean;
+  anniversary: boolean;
+}
+
+export interface InAppNotification {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  emoji: string;
+  route?: string;
+  createdAt: number;
+  read: boolean;
+}

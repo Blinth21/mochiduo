@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import {
   ArrowLeftRight,
+  Bell,
   Cloud,
   Heart,
   MapPin,
@@ -9,10 +10,9 @@ import {
   Sparkles,
   X,
 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
+  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
@@ -31,8 +31,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnniversaryBanner } from '@/components/AnniversaryBanner';
 import { BouncyPressable } from '@/components/BouncyPressable';
+import { DatePickerField } from '@/components/DatePickerField';
+import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
 import { LiveSyncModal } from '@/components/LiveSyncModal';
 import { MochiMascot } from '@/components/MochiMascot';
+import { NotificationCenterModal } from '@/components/NotificationCenterModal';
 import {
   MOOD_OPTIONS,
   NOTE_PALETTES,
@@ -62,6 +65,7 @@ export default function HomeScreen() {
   const anniversaryDate = useCoupleStore((s) => s.anniversaryDate);
   const syncConfig = useCoupleStore((s) => s.syncConfig);
   const syncStatus = useCoupleStore((s) => s.syncStatus);
+  const notifications = useCoupleStore((s) => s.notifications);
 
   const updateMood = useCoupleStore((s) => s.updateMood);
   const updateStatusText = useCoupleStore((s) => s.updateStatusText);
@@ -81,6 +85,29 @@ export default function HomeScreen() {
   const [statusInput, setStatusInput] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
+  const [notifModalVisible, setNotifModalVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const unreadNotifCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
 
   // Edit modal form state
   const [formTitle, setFormTitle] = useState(coupleTitle);
@@ -122,6 +149,7 @@ export default function HomeScreen() {
     triggerSuccessHaptic();
     updateStatusText(activePartnerId, trimmed);
     setStatusInput('');
+    Keyboard.dismiss();
   }, [activePartnerId, statusInput, updateStatusText]);
 
   const handleSendHug = useCallback(() => {
@@ -192,8 +220,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          keyboardHeight > 0 && { paddingBottom: keyboardHeight + 48 },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
         <View style={styles.centerColumn}>
@@ -205,6 +237,20 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.headerActions}>
+              <BouncyPressable
+                onPress={() => setNotifModalVisible(true)}
+                style={styles.bellBtn}
+                accessibilityLabel="Pusat Notifikasi">
+                <Bell size={15} color={Pastel.coralDark} />
+                {unreadNotifCount > 0 ? (
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>
+                      {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </BouncyPressable>
+
               <BouncyPressable
                 onPress={() => setSyncModalVisible(true)}
                 style={[
@@ -402,6 +448,11 @@ export default function HomeScreen() {
                 style={styles.statusInput}
                 maxLength={90}
                 returnKeyType="send"
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
                 onSubmitEditing={handleSaveStatus}
               />
               <BouncyPressable
@@ -453,95 +504,93 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Edit Couple Profile & Anniversary Modal */}
-      <Modal
+      <KeyboardModalSheet
         visible={editModalVisible}
-        animationType="slide"
-        transparent
         onRequestClose={() => setEditModalVisible(false)}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Sparkles size={18} color={Pastel.coral} />
-                <Text style={styles.modalTitle}>Atur Profil Couple</Text>
-              </View>
-              <BouncyPressable
-                onPress={() => setEditModalVisible(false)}
-                style={styles.modalCloseBtn}>
-                <X size={18} color={Pastel.textMuted} />
-              </BouncyPressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
-              <Text style={styles.inputLabel}>Nama Couple Kalian</Text>
-              <TextInput
-                value={formTitle}
-                onChangeText={setFormTitle}
-                placeholder="Misal: Mochi & Boba"
-                placeholderTextColor={Pastel.textSoft}
-                style={styles.modalInput}
-              />
-
-              <Text style={styles.inputLabel}>Tanggal Jadian (YYYY-MM-DD)</Text>
-              <TextInput
-                value={formDate}
-                onChangeText={setFormDate}
-                placeholder="2024-02-14"
-                placeholderTextColor={Pastel.textSoft}
-                style={styles.modalInput}
-              />
-
-              <View style={styles.modalTwoCol}>
-                <View style={styles.modalCol}>
-                  <Text style={styles.inputLabel}>Nama Partner 1</Text>
-                  <TextInput
-                    value={formP1Name}
-                    onChangeText={setFormP1Name}
-                    style={styles.modalInput}
-                  />
-                </View>
-                <View style={styles.modalCol}>
-                  <Text style={styles.inputLabel}>Panggilan</Text>
-                  <TextInput
-                    value={formP1Nick}
-                    onChangeText={setFormP1Nick}
-                    style={styles.modalInput}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.modalTwoCol}>
-                <View style={styles.modalCol}>
-                  <Text style={styles.inputLabel}>Nama Partner 2</Text>
-                  <TextInput
-                    value={formP2Name}
-                    onChangeText={setFormP2Name}
-                    style={styles.modalInput}
-                  />
-                </View>
-                <View style={styles.modalCol}>
-                  <Text style={styles.inputLabel}>Panggilan</Text>
-                  <TextInput
-                    value={formP2Nick}
-                    onChangeText={setFormP2Nick}
-                    style={styles.modalInput}
-                  />
-                </View>
-              </View>
-
-              <BouncyPressable onPress={handleSaveSettings} style={styles.saveModalBtn}>
-                <Text style={styles.saveModalBtnText}>Simpan Perubahan ✨</Text>
-              </BouncyPressable>
-            </ScrollView>
+        <View style={styles.modalHeader}>
+          <View style={styles.modalTitleRow}>
+            <Sparkles size={18} color={Pastel.coral} />
+            <Text style={styles.modalTitle}>Atur Profil Couple</Text>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          <BouncyPressable
+            onPress={() => setEditModalVisible(false)}
+            style={styles.modalCloseBtn}>
+            <X size={18} color={Pastel.textMuted} />
+          </BouncyPressable>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.modalBody}>
+          <Text style={styles.inputLabel}>Nama Couple Kalian</Text>
+          <TextInput
+            value={formTitle}
+            onChangeText={setFormTitle}
+            placeholder="Misal: Mochi & Boba"
+            placeholderTextColor={Pastel.textSoft}
+            style={styles.modalInput}
+          />
+
+          <Text style={styles.inputLabel}>Tanggal Jadian (Klik Kalender atau Ketik)</Text>
+          <DatePickerField
+            value={formDate}
+            onChange={setFormDate}
+            placeholder="2024-02-14"
+          />
+
+          <View style={styles.modalTwoCol}>
+            <View style={styles.modalCol}>
+              <Text style={styles.inputLabel}>Nama Partner 1</Text>
+              <TextInput
+                value={formP1Name}
+                onChangeText={setFormP1Name}
+                style={styles.modalInput}
+              />
+            </View>
+            <View style={styles.modalCol}>
+              <Text style={styles.inputLabel}>Panggilan</Text>
+              <TextInput
+                value={formP1Nick}
+                onChangeText={setFormP1Nick}
+                style={styles.modalInput}
+              />
+            </View>
+          </View>
+
+          <View style={styles.modalTwoCol}>
+            <View style={styles.modalCol}>
+              <Text style={styles.inputLabel}>Nama Partner 2</Text>
+              <TextInput
+                value={formP2Name}
+                onChangeText={setFormP2Name}
+                style={styles.modalInput}
+              />
+            </View>
+            <View style={styles.modalCol}>
+              <Text style={styles.inputLabel}>Panggilan</Text>
+              <TextInput
+                value={formP2Nick}
+                onChangeText={setFormP2Nick}
+                style={styles.modalInput}
+              />
+            </View>
+          </View>
+
+          <BouncyPressable onPress={handleSaveSettings} style={styles.saveModalBtn}>
+            <Text style={styles.saveModalBtnText}>Simpan Perubahan ✨</Text>
+          </BouncyPressable>
+        </ScrollView>
+      </KeyboardModalSheet>
 
       <LiveSyncModal
         visible={syncModalVisible}
         onClose={() => setSyncModalVisible(false)}
+      />
+
+      <NotificationCenterModal
+        visible={notifModalVisible}
+        onClose={() => setNotifModalVisible(false)}
       />
     </SafeAreaView>
   );
@@ -576,6 +625,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  bellBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Pastel.coralSoft,
+    borderWidth: 1.5,
+    borderColor: '#FFC7D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Pastel.coralDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: Pastel.white,
+  },
+  bellBadgeText: {
+    fontFamily: RoundedFont,
+    fontSize: 9,
+    fontWeight: '800',
+    color: Pastel.white,
   },
   syncPill: {
     flexDirection: 'row',

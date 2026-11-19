@@ -1,15 +1,17 @@
 import * as Location from 'expo-location';
 import {
   ArrowLeftRight,
-  BatteryCharging,
   ExternalLink,
   Eye,
   EyeOff,
   LocateFixed,
+  Map as MapIcon,
   MapPin,
+  Radar,
+  Radio,
   ShieldCheck,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -22,6 +24,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
+import { CoupleLocationMap } from '@/components/CoupleLocationMap';
 import { CoupleLocationRadar } from '@/components/CoupleLocationRadar';
 import { LiveSyncModal } from '@/components/LiveSyncModal';
 import { Pastel, RoundedFont } from '@/constants/pastelTheme';
@@ -74,10 +77,10 @@ export default function LokasiScreen() {
   const myLoc = activePartnerId === 'p1' ? loc1 : loc2;
   const partnerLoc = activePartnerId === 'p1' ? loc2 : loc1;
 
+  const [viewMode, setViewMode] = useState<'map' | 'radar'>('map');
   const [isLocating, setIsLocating] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [syncModalVisible, setSyncModalVisible] = useState(false);
-  const watchSubRef = useRef<Location.LocationSubscription | null>(null);
 
   const handleSwitchPartner = useCallback(() => {
     setActivePartner(activePartnerId === 'p1' ? 'p2' : 'p1');
@@ -94,7 +97,7 @@ export default function LokasiScreen() {
       }
 
       const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
       });
       const areaName = await resolveReadableArea(
         pos.coords.latitude,
@@ -116,58 +119,21 @@ export default function LokasiScreen() {
     }
   }, [activePartnerId, me.name, updatePartnerLocation]);
 
-  // Battery-optimized live watch (50m distance interval, 15s minimum interval)
-  useEffect(() => {
-    let cancelled = false;
-
-    async function startWatch() {
-      if (!liveWatchEnabled || !myLoc.isSharing) {
-        watchSubRef.current?.remove();
-        watchSubRef.current = null;
-        return;
-      }
-
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted' || cancelled) {
-        setLiveWatchEnabled(false);
-        return;
-      }
-
-      const sub = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          distanceInterval: 50,
-          timeInterval: 15000,
-        },
-        async (pos) => {
-          const areaName = await resolveReadableArea(
-            pos.coords.latitude,
-            pos.coords.longitude
-          );
-          updatePartnerLocation(activePartnerId, {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            areaName,
-            accuracyMeters: pos.coords.accuracy ?? undefined,
-          });
+  const handleToggleLiveWatch = useCallback(
+    async (enabled: boolean) => {
+      if (enabled) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setFeedbackMsg('Izin lokasi ditolak. Aktifkan izin lokasi di Pengaturan HP.');
+          setLiveWatchEnabled(false);
+          return;
         }
-      );
-
-      if (cancelled) {
-        sub.remove();
-      } else {
-        watchSubRef.current = sub;
+        // Cycle false->true only if needed? No, if already false it becomes true and triggers watcher
       }
-    }
-
-    startWatch().catch(() => {});
-
-    return () => {
-      cancelled = true;
-      watchSubRef.current?.remove();
-      watchSubRef.current = null;
-    };
-  }, [activePartnerId, liveWatchEnabled, myLoc.isSharing, setLiveWatchEnabled, updatePartnerLocation]);
+      setLiveWatchEnabled(enabled);
+    },
+    [setLiveWatchEnabled]
+  );
 
   const handleOpenPartnerMaps = useCallback(() => {
     if (!partnerLoc.isSharing) return;
@@ -198,10 +164,12 @@ export default function LokasiScreen() {
         <View style={styles.centerColumn}>
           {/* Header */}
           <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.pageTitle}>Radar Pasangan 📍</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pageTitle}>Maps & Radar Lokasi 📍</Text>
               <Text style={styles.pageSub}>
-                Pelacakan hemat baterai & ramah privasi
+                {liveWatchEnabled && myLoc.isSharing
+                  ? '🟢 GPS Real-Time aktif (update tiap 5 dtk / ≥10m)'
+                  : 'Mode hemat / update manual'}
               </Text>
             </View>
 
@@ -211,13 +179,69 @@ export default function LokasiScreen() {
             </BouncyPressable>
           </View>
 
-          {/* Radar Visualization */}
-          <CoupleLocationRadar
-            me={me}
-            myLoc={myLoc}
-            partner={partner}
-            partnerLoc={partnerLoc}
-          />
+          {/* View Mode Switcher: Peta Maps vs Radar Mochi */}
+          <View style={styles.viewSwitchRow}>
+            <BouncyPressable
+              onPress={() => {
+                triggerMediumHaptic();
+                setViewMode('map');
+              }}
+              style={[
+                styles.viewSwitchBtn,
+                viewMode === 'map' && styles.viewSwitchBtnActive,
+              ]}>
+              <MapIcon
+                size={15}
+                color={viewMode === 'map' ? Pastel.white : Pastel.textMuted}
+              />
+              <Text
+                style={[
+                  styles.viewSwitchText,
+                  viewMode === 'map' && styles.viewSwitchTextActive,
+                ]}>
+                Peta Maps
+              </Text>
+            </BouncyPressable>
+
+            <BouncyPressable
+              onPress={() => {
+                triggerMediumHaptic();
+                setViewMode('radar');
+              }}
+              style={[
+                styles.viewSwitchBtn,
+                viewMode === 'radar' && styles.viewSwitchBtnActive,
+              ]}>
+              <Radar
+                size={15}
+                color={viewMode === 'radar' ? Pastel.white : Pastel.textMuted}
+              />
+              <Text
+                style={[
+                  styles.viewSwitchText,
+                  viewMode === 'radar' && styles.viewSwitchTextActive,
+                ]}>
+                Radar Mochi
+              </Text>
+            </BouncyPressable>
+          </View>
+
+          {/* Interactive Map or Radar Visualization */}
+          {viewMode === 'map' ? (
+            <CoupleLocationMap
+              me={me}
+              myLoc={myLoc}
+              partner={partner}
+              partnerLoc={partnerLoc}
+            />
+          ) : (
+            <CoupleLocationRadar
+              me={me}
+              myLoc={myLoc}
+              partner={partner}
+              partnerLoc={partnerLoc}
+            />
+          )}
 
           {/* GPS Update & Controls Card */}
           <View style={styles.card}>
@@ -276,18 +300,18 @@ export default function LokasiScreen() {
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleIcon, { backgroundColor: Pastel.matchaSoft }]}>
-                  <BatteryCharging size={16} color={Pastel.matcha} />
+                  <Radio size={16} color={Pastel.matcha} />
                 </View>
                 <View style={styles.toggleCopy}>
-                  <Text style={styles.toggleTitle}>Pantau Otomatis Hemat Baterai</Text>
+                  <Text style={styles.toggleTitle}>GPS Real-Time Otomatis</Text>
                   <Text style={styles.toggleSub}>
-                    Update tiap pindah ≥50m (bukan polling terus)
+                    Aktif di semua tab (update tiap 5 dtk / pindah ≥10m)
                   </Text>
                 </View>
               </View>
               <Switch
                 value={liveWatchEnabled}
-                onValueChange={(v) => setLiveWatchEnabled(v)}
+                onValueChange={handleToggleLiveWatch}
                 trackColor={{ false: Pastel.border, true: Pastel.matcha }}
                 thumbColor={Pastel.white}
               />
@@ -364,8 +388,8 @@ export default function LokasiScreen() {
             <ShieldCheck size={16} color="#199E74" />
             <Text style={styles.infoBannerText}>
               {syncConfig.enabled && syncStatus === 'connected'
-                ? `Live Sync 2 HP aktif (Room ${syncConfig.roomCode}). Tap untuk kelola koneksi.`
-                : 'GPS memakai mode hemat baterai. Tap di sini untuk hubungkan Live Sync Gratis antar 2 HP!'}
+                ? `GPS Real-Time & Live Sync 2 HP aktif (Room ${syncConfig.roomCode}). Posisi otomatis terkirim ke HP pasangan setiap pindah ≥10m di semua tab.`
+                : 'GPS Real-Time aktif lokal. Tap di sini untuk hubungkan Live Sync Gratis antar 2 HP supaya posisi langsung muncul di HP pasangan!'}
             </Text>
           </BouncyPressable>
         </View>
@@ -412,9 +436,40 @@ const styles = StyleSheet.create({
   },
   pageSub: {
     fontFamily: RoundedFont,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '600',
     color: Pastel.textMuted,
+  },
+  viewSwitchRow: {
+    flexDirection: 'row',
+    backgroundColor: Pastel.white,
+    borderRadius: 18,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: Pastel.border,
+    gap: 6,
+  },
+  viewSwitchBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 13,
+  },
+  viewSwitchBtnActive: {
+    backgroundColor: Pastel.sky,
+  },
+  viewSwitchText: {
+    fontFamily: RoundedFont,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Pastel.textMuted,
+  },
+  viewSwitchTextActive: {
+    color: Pastel.white,
+    fontWeight: '800',
   },
   switchPill: {
     flexDirection: 'row',

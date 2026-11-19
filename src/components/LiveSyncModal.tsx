@@ -10,9 +10,6 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +18,7 @@ import {
 } from 'react-native';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
+import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
 import { Pastel, RoundedFont } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { PartnerId } from '@/types/couple';
@@ -117,28 +115,21 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
   const isConnected = syncConfig.enabled && syncStatus === 'connected';
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <Cloud size={20} color={Pastel.taro} />
-              <Text style={styles.title}>Sinkronisasi Live 2 HP</Text>
-            </View>
-            <BouncyPressable onPress={onClose} style={styles.closeBtn}>
-              <X size={18} color={Pastel.textMuted} />
-            </BouncyPressable>
-          </View>
+    <KeyboardModalSheet visible={visible} onRequestClose={onClose} maxHeightRatio={0.9}>
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <Cloud size={20} color={Pastel.taro} />
+          <Text style={styles.title}>Sinkronisasi Live 2 HP</Text>
+        </View>
+        <BouncyPressable onPress={onClose} style={styles.closeBtn}>
+          <X size={18} color={Pastel.textMuted} />
+        </BouncyPressable>
+      </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.body}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.body}>
             {/* Status Banner */}
             <View
               style={[
@@ -274,9 +265,7 @@ export const LiveSyncModal = React.memo(function LiveSyncModal({
               </Text>
             </View>
           </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </KeyboardModalSheet>
   );
 });
 

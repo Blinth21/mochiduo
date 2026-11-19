@@ -36,23 +36,34 @@ create table if not exists public.couple_notes (
   created_at bigint not null
 );
 
+create table if not exists public.couple_messages (
+  id text primary key,
+  room_code text not null references public.couple_rooms(room_code) on delete cascade,
+  data jsonb not null,
+  created_at bigint not null
+);
+
 create index if not exists idx_couple_memories_room on public.couple_memories(room_code, created_at desc);
 create index if not exists idx_couple_buckets_room on public.couple_buckets(room_code, updated_at desc);
 create index if not exists idx_couple_notes_room on public.couple_notes(room_code, created_at desc);
+create index if not exists idx_couple_messages_room on public.couple_messages(room_code, created_at asc);
 
 -- Row Level Security (akses dibatasi per project & room_code rahasia pasangan)
 alter table public.couple_rooms enable row level security;
 alter table public.couple_memories enable row level security;
 alter table public.couple_buckets enable row level security;
 alter table public.couple_notes enable row level security;
+alter table public.couple_messages enable row level security;
 
 create policy "Allow couple_rooms access" on public.couple_rooms for all using (true) with check (true);
 create policy "Allow couple_memories access" on public.couple_memories for all using (true) with check (true);
 create policy "Allow couple_buckets access" on public.couple_buckets for all using (true) with check (true);
 create policy "Allow couple_notes access" on public.couple_notes for all using (true) with check (true);
+create policy "Allow couple_messages access" on public.couple_messages for all using (true) with check (true);
 
--- Aktifkan Realtime Postgres Changes untuk keempat tabel
+-- Aktifkan Realtime Postgres Changes untuk semua tabel
 alter publication supabase_realtime add table public.couple_rooms;
 alter publication supabase_realtime add table public.couple_memories;
 alter publication supabase_realtime add table public.couple_buckets;
 alter publication supabase_realtime add table public.couple_notes;
+alter publication supabase_realtime add table public.couple_messages;

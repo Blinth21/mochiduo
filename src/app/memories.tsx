@@ -12,9 +12,6 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +21,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
+import { DatePickerField } from '@/components/DatePickerField';
+import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
 import { MEMORY_TAGS, Pastel, RoundedFont } from '@/constants/pastelTheme';
 import { useCoupleStore } from '@/store/useCoupleStore';
 import type { MemoryItem, MemoryTag } from '@/types/couple';
@@ -168,7 +167,7 @@ export default function MemoriesScreen() {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.45,
+      quality: 0.35,
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
@@ -313,135 +312,124 @@ export default function MemoriesScreen() {
       </View>
 
       {/* Add Memory Modal */}
-      <Modal
+      <KeyboardModalSheet
         visible={modalVisible}
-        animationType="slide"
-        transparent
         onRequestClose={() => setModalVisible(false)}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Abadikan Momen Baru ✨</Text>
-              <BouncyPressable
-                onPress={() => setModalVisible(false)}
-                style={styles.modalCloseBtn}>
-                <X size={18} color={Pastel.textMuted} />
-              </BouncyPressable>
-            </View>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Abadikan Momen Baru ✨</Text>
+          <BouncyPressable
+            onPress={() => setModalVisible(false)}
+            style={styles.modalCloseBtn}>
+            <X size={18} color={Pastel.textMuted} />
+          </BouncyPressable>
+        </View>
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.modalBody}>
-              {/* Photo Picker */}
-              <BouncyPressable onPress={pickPhoto} style={styles.photoPickerBox}>
-                {photoUri ? (
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={styles.previewImage}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={styles.photoPickerPlaceholder}>
-                    <ImagePlus size={26} color={Pastel.sky} />
-                    <Text style={styles.photoPickerTitle}>Pilih Foto dari Galeri</Text>
-                    <Text style={styles.photoPickerSub}>
-                      Opsional — kosongkan untuk pakai kartu stiker pastel
-                    </Text>
-                  </View>
-                )}
-              </BouncyPressable>
-
-              <Text style={styles.inputLabel}>Judul Momen *</Text>
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder="Misal: Kencan Es Krim Sore"
-                placeholderTextColor={Pastel.textSoft}
-                style={styles.modalInput}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.modalBody}>
+          {/* Photo Picker */}
+          <BouncyPressable onPress={pickPhoto} style={styles.photoPickerBox}>
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.previewImage}
+                contentFit="cover"
               />
-
-              <View style={styles.twoCol}>
-                <View style={styles.col}>
-                  <Text style={styles.inputLabel}>Tanggal (YYYY-MM-DD)</Text>
-                  <TextInput
-                    value={dateStr}
-                    onChangeText={setDateStr}
-                    style={styles.modalInput}
-                  />
-                </View>
-                <View style={styles.col}>
-                  <Text style={styles.inputLabel}>Lokasi</Text>
-                  <TextInput
-                    value={location}
-                    onChangeText={setLocation}
-                    placeholder="Misal: Blok M"
-                    placeholderTextColor={Pastel.textSoft}
-                    style={styles.modalInput}
-                  />
-                </View>
+            ) : (
+              <View style={styles.photoPickerPlaceholder}>
+                <ImagePlus size={26} color={Pastel.sky} />
+                <Text style={styles.photoPickerTitle}>Pilih Foto dari Galeri</Text>
+                <Text style={styles.photoPickerSub}>
+                  Opsional — kosongkan untuk pakai kartu stiker pastel
+                </Text>
               </View>
+            )}
+          </BouncyPressable>
 
-              <Text style={styles.inputLabel}>Kategori</Text>
-              <View style={styles.tagRow}>
-                {MEMORY_TAGS.filter((t) => t.id !== 'all').map((t) => {
-                  const selected = tag === t.id;
-                  return (
-                    <BouncyPressable
-                      key={t.id}
-                      onPress={() => setTag(t.id as MemoryTag)}
-                      style={[
-                        styles.filterChip,
-                        selected && { backgroundColor: t.bg, borderColor: t.accent },
-                      ]}>
-                      <Text style={styles.filterEmoji}>{t.emoji}</Text>
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          selected && { color: t.accent, fontWeight: '800' },
-                        ]}>
-                        {t.label}
-                      </Text>
-                    </BouncyPressable>
-                  );
-                })}
-              </View>
+          <Text style={styles.inputLabel}>Judul Momen *</Text>
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Misal: Kencan Es Krim Sore"
+            placeholderTextColor={Pastel.textSoft}
+            style={styles.modalInput}
+          />
 
-              <Text style={styles.inputLabel}>Pilih Stiker Lucu</Text>
-              <View style={styles.stickerRow}>
-                {MEMORY_STICKERS.map((s) => (
-                  <BouncyPressable
-                    key={s}
-                    onPress={() => setSticker(s)}
+          <Text style={styles.inputLabel}>Tanggal Momen (Klik atau Ketik)</Text>
+          <DatePickerField
+            value={dateStr}
+            onChange={setDateStr}
+            placeholder="Pilih tanggal momen..."
+            compact
+          />
+
+          <Text style={styles.inputLabel}>Lokasi</Text>
+          <TextInput
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Misal: Blok M"
+            placeholderTextColor={Pastel.textSoft}
+            style={styles.modalInput}
+          />
+
+          <Text style={styles.inputLabel}>Kategori</Text>
+          <View style={styles.tagRow}>
+            {MEMORY_TAGS.filter((t) => t.id !== 'all').map((t) => {
+              const selected = tag === t.id;
+              return (
+                <BouncyPressable
+                  key={t.id}
+                  onPress={() => setTag(t.id as MemoryTag)}
+                  style={[
+                    styles.filterChip,
+                    selected && { backgroundColor: t.bg, borderColor: t.accent },
+                  ]}>
+                  <Text style={styles.filterEmoji}>{t.emoji}</Text>
+                  <Text
                     style={[
-                      styles.stickerBtn,
-                      sticker === s && styles.stickerBtnActive,
+                      styles.filterChipText,
+                      selected && { color: t.accent, fontWeight: '800' },
                     ]}>
-                    <Text style={styles.stickerText}>{s}</Text>
-                  </BouncyPressable>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Cerita Singkat</Text>
-              <TextInput
-                value={story}
-                onChangeText={setStory}
-                placeholder="Ceritain hal paling lucu atau manis di momen ini..."
-                placeholderTextColor={Pastel.textSoft}
-                style={[styles.modalInput, styles.textArea]}
-                multiline
-              />
-
-              <BouncyPressable
-                onPress={handleCreateMemory}
-                style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}>
-                <Text style={styles.saveBtnText}>Simpan Kenangan 💕</Text>
-              </BouncyPressable>
-            </ScrollView>
+                    {t.label}
+                  </Text>
+                </BouncyPressable>
+              );
+            })}
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+
+          <Text style={styles.inputLabel}>Pilih Stiker Lucu</Text>
+          <View style={styles.stickerRow}>
+            {MEMORY_STICKERS.map((s) => (
+              <BouncyPressable
+                key={s}
+                onPress={() => setSticker(s)}
+                style={[
+                  styles.stickerBtn,
+                  sticker === s && styles.stickerBtnActive,
+                ]}>
+                <Text style={styles.stickerText}>{s}</Text>
+              </BouncyPressable>
+            ))}
+          </View>
+
+          <Text style={styles.inputLabel}>Cerita Singkat</Text>
+          <TextInput
+            value={story}
+            onChangeText={setStory}
+            placeholder="Ceritain hal paling lucu atau manis di momen ini..."
+            placeholderTextColor={Pastel.textSoft}
+            style={[styles.modalInput, styles.textArea]}
+            multiline
+          />
+
+          <BouncyPressable
+            onPress={handleCreateMemory}
+            style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}>
+            <Text style={styles.saveBtnText}>Simpan Kenangan 💕</Text>
+          </BouncyPressable>
+        </ScrollView>
+      </KeyboardModalSheet>
     </SafeAreaView>
   );
 }

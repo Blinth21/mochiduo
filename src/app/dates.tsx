@@ -10,9 +10,6 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,10 +25,19 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BouncyPressable } from '@/components/BouncyPressable';
+import { DatePickerField } from '@/components/DatePickerField';
+import { KeyboardModalSheet } from '@/components/KeyboardModalSheet';
 import { BUCKET_CATEGORIES, Pastel, RoundedFont } from '@/constants/pastelTheme';
 import { CURATED_DATE_IDEAS, useCoupleStore } from '@/store/useCoupleStore';
 import type { BucketCategory, BucketItem } from '@/types/couple';
 import { triggerMediumHaptic, triggerSuccessHaptic } from '@/utils/haptics';
+
+const DATE_QUICK_PRESETS = [
+  { label: 'Besok', value: new Date(Date.now() + 86400000).toISOString().slice(0, 10) },
+  { label: 'Akhir Pekan Ini', value: 'Akhir Pekan Ini' },
+  { label: 'Minggu Depan', value: 'Minggu Depan' },
+  { label: 'Bulan Depan', value: 'Bulan Depan' },
+];
 
 interface BucketRowProps {
   item: BucketItem;
@@ -305,79 +311,73 @@ export default function DatesScreen() {
       </View>
 
       {/* Add Bucket Item Modal */}
-      <Modal
+      <KeyboardModalSheet
         visible={modalVisible}
-        animationType="slide"
-        transparent
         onRequestClose={() => setModalVisible(false)}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Tambah Rencana Kencan 🎡</Text>
-              <BouncyPressable
-                onPress={() => setModalVisible(false)}
-                style={styles.modalCloseBtn}>
-                <X size={18} color={Pastel.textMuted} />
-              </BouncyPressable>
-            </View>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Tambah Rencana Kencan 🎡</Text>
+          <BouncyPressable
+            onPress={() => setModalVisible(false)}
+            style={styles.modalCloseBtn}>
+            <X size={18} color={Pastel.textMuted} />
+          </BouncyPressable>
+        </View>
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.modalBody}>
-              <Text style={styles.inputLabel}>Mau Ngapain Nih? *</Text>
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder="Misal: Cobain kafe kucing bareng"
-                placeholderTextColor={Pastel.textSoft}
-                style={styles.modalInput}
-              />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.modalBody}>
+          <Text style={styles.inputLabel}>Mau Ngapain Nih? *</Text>
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Misal: Cobain kafe kucing bareng"
+            placeholderTextColor={Pastel.textSoft}
+            style={styles.modalInput}
+          />
 
-              <Text style={styles.inputLabel}>Kapan? (Opsional)</Text>
-              <TextInput
-                value={targetDate}
-                onChangeText={setTargetDate}
-                placeholder="Misal: Sabtu Sore / Bulan Depan"
-                placeholderTextColor={Pastel.textSoft}
-                style={styles.modalInput}
-              />
+          <Text style={styles.inputLabel}>Kapan? (Pilih Kalender atau Ketik)</Text>
+          <DatePickerField
+            value={targetDate}
+            onChange={setTargetDate}
+            placeholder="Pilih tanggal / akhir pekan..."
+            allowFreeText
+            quickPresets={DATE_QUICK_PRESETS}
+            compact
+          />
 
-              <Text style={styles.inputLabel}>Kategori</Text>
-              <View style={styles.catGrid}>
-                {BUCKET_CATEGORIES.map((c) => {
-                  const selected = category === c.id;
-                  return (
-                    <BouncyPressable
-                      key={c.id}
-                      onPress={() => setCategory(c.id)}
-                      style={[
-                        styles.catChoice,
-                        selected && { backgroundColor: c.bg, borderColor: c.accent },
-                      ]}>
-                      <Text style={styles.catChoiceEmoji}>{c.emoji}</Text>
-                      <Text
-                        style={[
-                          styles.catChoiceLabel,
-                          selected && { color: c.accent, fontWeight: '800' },
-                        ]}>
-                        {c.label}
-                      </Text>
-                    </BouncyPressable>
-                  );
-                })}
-              </View>
-
-              <BouncyPressable
-                onPress={handleCreateBucket}
-                style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}>
-                <Text style={styles.saveBtnText}>Masukkan ke Bucket List ✨</Text>
-              </BouncyPressable>
-            </ScrollView>
+          <Text style={styles.inputLabel}>Kategori</Text>
+          <View style={styles.catGrid}>
+            {BUCKET_CATEGORIES.map((c) => {
+              const selected = category === c.id;
+              return (
+                <BouncyPressable
+                  key={c.id}
+                  onPress={() => setCategory(c.id)}
+                  style={[
+                    styles.catChoice,
+                    selected && { backgroundColor: c.bg, borderColor: c.accent },
+                  ]}>
+                  <Text style={styles.catChoiceEmoji}>{c.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.catChoiceLabel,
+                      selected && { color: c.accent, fontWeight: '800' },
+                    ]}>
+                    {c.label}
+                  </Text>
+                </BouncyPressable>
+              );
+            })}
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+
+          <BouncyPressable
+            onPress={handleCreateBucket}
+            style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}>
+            <Text style={styles.saveBtnText}>Masukkan ke Bucket List ✨</Text>
+          </BouncyPressable>
+        </ScrollView>
+      </KeyboardModalSheet>
     </SafeAreaView>
   );
 }

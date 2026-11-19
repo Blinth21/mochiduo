@@ -2,6 +2,7 @@ import { createClient, type RealtimeChannel, type SupabaseClient } from '@supaba
 
 import type {
   BucketItem,
+  ChatMessage,
   LocationSnapshot,
   LoveNote,
   MemoryItem,
@@ -12,6 +13,8 @@ import type {
 
 let cachedClient: SupabaseClient | null = null;
 let cachedKey = '';
+let activeRoomChannel: RealtimeChannel | null = null;
+let activeRoomKey = '';
 
 export function getSupabaseClient(url: string, anonKey: string): SupabaseClient | null {
   const cleanUrl = url.trim();
@@ -30,7 +33,7 @@ export function getSupabaseClient(url: string, anonKey: string): SupabaseClient 
       detectSessionInUrl: false,
     },
     realtime: {
-      params: { eventsPerSecond: 10 },
+      params: { eventsPerSecond: 15 },
     },
   });
   cachedKey = sig;
@@ -48,6 +51,7 @@ export interface RoomSeedPayload {
   memories: MemoryItem[];
   bucketList: BucketItem[];
   loveNotes: LoveNote[];
+  chatMessages: ChatMessage[];
 }
 
 export interface RemoteRoomData {
@@ -61,6 +65,7 @@ export interface RemoteRoomData {
   memories: MemoryItem[];
   bucketList: BucketItem[];
   loveNotes: LoveNote[];
+  chatMessages: ChatMessage[];
 }
 
 export async function joinOrCreateRoom(
@@ -84,7 +89,7 @@ export async function joinOrCreateRoom(
   }
 
   if (existingRoom) {
-    const [memRes, buckRes, noteRes] = await Promise.all([
+    const [memRes, buckRes, noteRes, msgRes] = await Promise.all([
       client
         .from('couple_memories')
         .select('data')
@@ -100,6 +105,12 @@ export async function joinOrCreateRoom(
         .select('data')
         .eq('room_code', code)
         .order('created_at', { ascending: false }),
+      client
+        .from('couple_messages')
+        .select('data')
+        .eq('room_code', code)
+        .order('created_at', { ascending: true })
+        .limit(200),
     ]);
 
     return {
@@ -121,6 +132,9 @@ export async function joinOrCreateRoom(
         memories: (memRes.data ?? []).map((r: any) => r.data as MemoryItem),
         bucketList: (buckRes.data ?? []).map((r: any) => r.data as BucketItem),
         loveNotes: (noteRes.data ?? []).map((r: any) => r.data as LoveNote),
+        chatMessages: msgRes.error
+          ? seed.chatMessages
+          : (msgRes.data ?? []).map((r: any) => r.data as ChatMessage),
       },
     };
   }
@@ -174,12 +188,26 @@ export async function joinOrCreateRoom(
           }))
         )
       : Promise.resolve(),
+    seed.chatMessages.length > 0
+      ? client
+          .from('couple_messages')
+          .upsert(
+            seed.chatMessages.map((msg) => ({
+              id: msg.id,
+              room_code: code,
+              data: msg,
+              created_at: msg.createdAt,
+            }))
+          )
+          .then(() => undefined, () => undefined)
+      : Promise.resolve(),
   ]);
 
   return { created: true, data: seed };
 }
 
 export interface RoomRealtimeHandlers {
+  activePartnerId: PartnerId;
   onRoomUpdate: (row: any) => void;
   onMemoryUpsert: (item: MemoryItem) => void;
   onMemoryDelete: (id: string) => void;
@@ -187,6 +215,11 @@ export interface RoomRealtimeHandlers {
   onBucketDelete: (id: string) => void;
   onNoteUpsert: (item: LoveNote) => void;
   onNoteDelete: (id: string) => void;
+  onMessageUpsert: (item: ChatMessage) => void;
+  onMessageDelete: (id: string) => void;
+  onTypingChange: (senderId: PartnerId, isTyping: boolean) => void;
+  onLiveLocationBroadcast: (partnerId: PartnerId, loc: LocationSnapshot) => void;
+  onPresenceChange: (online: Record<PartnerId, boolean>) => void;
   onStatusChange: (status: 'connected' | 'error', err?: string) => void;
 }
 
@@ -199,7 +232,11 @@ export function subscribeToRoom(
   if (!client || !code) return () => {};
 
   const channel: RealtimeChannel = client
-    .channel(`mochiduo-room-${code}`)
+    .channel(`mochiduo-room-${code}`, {
+      config: {
+        presence: { key: handlers.activePartnerId },
+      },
+    })
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'couple_rooms', filter: `room_code=eq.${code}` },
@@ -243,17 +280,82 @@ export function subscribeToRoom(
         }
       }
     )
-    .subscribe((status, err) => {
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'couple_messages', filter: `room_code=eq.${code}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const oldId = (payload.old as any)?.id;
+          if (oldId) handlers.onMessageDelete(oldId);
+        } else if ((payload.new as any)?.data) {
+          handlers.onMessageUpsert((payload.new as any).data as ChatMessage);
+        }
+      }
+    )
+    .on('broadcast', { event: 'typing' }, (msg) => {
+      const payload = msg.payload as { senderId?: PartnerId; isTyping?: boolean } | undefined;
+      if (payload?.senderId) {
+        handlers.onTypingChange(payload.senderId, Boolean(payload.isTyping));
+      }
+    })
+    .on('broadcast', { event: 'live_location' }, (msg) => {
+      const payload = msg.payload as { partnerId?: PartnerId; location?: LocationSnapshot } | undefined;
+      if (payload?.partnerId && payload?.location) {
+        handlers.onLiveLocationBroadcast(payload.partnerId, payload.location);
+      }
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      handlers.onPresenceChange({
+        p1: Boolean(state.p1 && state.p1.length > 0),
+        p2: Boolean(state.p2 && state.p2.length > 0),
+      });
+    })
+    .subscribe(async (status, err) => {
       if (status === 'SUBSCRIBED') {
+        activeRoomChannel = channel;
+        activeRoomKey = code;
         handlers.onStatusChange('connected');
+        await channel
+          .track({
+            partnerId: handlers.activePartnerId,
+            onlineAt: Date.now(),
+          })
+          .catch(() => {});
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         handlers.onStatusChange('error', err?.message ?? 'Koneksi realtime terputus');
       }
     });
 
   return () => {
+    if (activeRoomChannel === channel) {
+      activeRoomChannel = null;
+      activeRoomKey = '';
+    }
     client.removeChannel(channel).catch(() => {});
   };
+}
+
+export function broadcastTyping(roomCode: string, senderId: PartnerId, isTyping: boolean): void {
+  if (!activeRoomChannel || activeRoomKey !== roomCode.trim().toUpperCase()) return;
+  void activeRoomChannel.send({
+    type: 'broadcast',
+    event: 'typing',
+    payload: { senderId, isTyping },
+  });
+}
+
+export function broadcastLiveLocation(
+  roomCode: string,
+  partnerId: PartnerId,
+  location: LocationSnapshot
+): void {
+  if (!activeRoomChannel || activeRoomKey !== roomCode.trim().toUpperCase()) return;
+  void activeRoomChannel.send({
+    type: 'broadcast',
+    event: 'live_location',
+    payload: { partnerId, location },
+  });
 }
 
 export async function pushRoomFields(
@@ -328,4 +430,31 @@ export async function pushNoteDelete(config: SyncConfig, id: string): Promise<vo
   const client = getSupabaseClient(config.supabaseUrl, config.supabaseAnonKey);
   if (!client) return;
   await client.from('couple_notes').delete().eq('id', id);
+}
+
+export async function pushMessageUpsert(config: SyncConfig, item: ChatMessage): Promise<void> {
+  if (!config.enabled) return;
+  const client = getSupabaseClient(config.supabaseUrl, config.supabaseAnonKey);
+  const code = config.roomCode.trim().toUpperCase();
+  if (!client || !code) return;
+  await client
+    .from('couple_messages')
+    .upsert({
+      id: item.id,
+      room_code: code,
+      data: item,
+      created_at: item.createdAt,
+    })
+    .then(() => undefined, () => undefined);
+}
+
+export async function pushMessageDelete(config: SyncConfig, id: string): Promise<void> {
+  if (!config.enabled) return;
+  const client = getSupabaseClient(config.supabaseUrl, config.supabaseAnonKey);
+  if (!client) return;
+  await client
+    .from('couple_messages')
+    .delete()
+    .eq('id', id)
+    .then(() => undefined, () => undefined);
 }

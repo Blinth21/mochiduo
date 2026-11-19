@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
-import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import {
+  Pressable,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { triggerLightHaptic } from '@/utils/haptics';
 
@@ -15,40 +15,18 @@ interface BouncyPressableProps extends Omit<PressableProps, 'style'> {
   withHaptic?: boolean;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
+/**
+ * Lightweight pressable without per-instance Reanimated worklets,
+ * keeping list rows and chips snappy with minimal memory overhead.
+ */
 export const BouncyPressable = React.memo(function BouncyPressable({
   children,
   style,
   scaleTo = 0.96,
   withHaptic = true,
-  onPressIn,
-  onPressOut,
   onPress,
   ...rest
 }: BouncyPressableProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = useCallback(
-    (e: any) => {
-      scale.value = withSpring(scaleTo, { damping: 14, stiffness: 320 });
-      onPressIn?.(e);
-    },
-    [onPressIn, scale, scaleTo]
-  );
-
-  const handlePressOut = useCallback(
-    (e: any) => {
-      scale.value = withSpring(1, { damping: 12, stiffness: 260 });
-      onPressOut?.(e);
-    },
-    [onPressOut, scale]
-  );
-
   const handlePress = useCallback(
     (e: any) => {
       if (withHaptic) triggerLightHaptic();
@@ -58,13 +36,16 @@ export const BouncyPressable = React.memo(function BouncyPressable({
   );
 
   return (
-    <AnimatedPressable
+    <Pressable
       {...rest}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
       onPress={handlePress}
-      style={[style, animatedStyle]}>
+      style={({ pressed }) => [
+        style,
+        pressed && !rest.disabled
+          ? { transform: [{ scale: scaleTo }], opacity: 0.9 }
+          : undefined,
+      ]}>
       {children}
-    </AnimatedPressable>
+    </Pressable>
   );
 });

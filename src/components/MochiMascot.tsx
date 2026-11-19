@@ -1,7 +1,9 @@
+import { useIsFocused } from 'expo-router';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -28,22 +30,32 @@ export const MochiMascot = React.memo(function MochiMascot({
   size = 76,
   delayMs = 0,
 }: MochiMascotProps) {
+  const isFocused = useIsFocused();
   const translateY = useSharedValue(0);
 
   useEffect(() => {
+    if (!isFocused) {
+      cancelAnimation(translateY);
+      translateY.value = 0;
+      return;
+    }
+
     const timer = setTimeout(() => {
       translateY.value = withRepeat(
         withSequence(
-          withTiming(-5, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) })
+          withTiming(-4, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.sin) })
         ),
         -1,
         true
       );
     }, delayMs);
 
-    return () => clearTimeout(timer);
-  }, [delayMs, translateY]);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimation(translateY);
+    };
+  }, [delayMs, isFocused, translateY]);
 
   const floatStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

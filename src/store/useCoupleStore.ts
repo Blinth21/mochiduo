@@ -5,29 +5,41 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 
 import { MOOD_OPTIONS } from '@/constants/pastelTheme';
 import {
+  broadcastLiveLocation,
   joinOrCreateRoom,
   pushBucketDelete,
   pushBucketUpsert,
   pushMemoryDelete,
   pushMemoryUpsert,
+  pushMessageDelete,
+  pushMessageUpsert,
   pushNoteDelete,
   pushNoteUpsert,
   pushRoomFields,
 } from '@/services/coupleSync';
+import {
+  fireSystemNotification,
+  isCategoryEnabled,
+} from '@/services/notifications';
 import type {
   BucketCategory,
   BucketItem,
+  ChatMessage,
   DateIdea,
+  InAppNotification,
   LocationSnapshot,
   LoveNote,
   MemoryItem,
   MoodId,
   NoteColorId,
+  NotificationCategory,
+  NotificationPrefs,
   PartnerId,
   PartnerProfile,
   SyncConfig,
   SyncStatus,
 } from '@/types/couple';
+import { getDistanceMeters } from '@/utils/geoCalc';
 
 export const CURATED_DATE_IDEAS: DateIdea[] = [
   {
@@ -117,6 +129,17 @@ const safeStorage: StateStorage = {
   },
 };
 
+const DEFAULT_NOTIF_PREFS: NotificationPrefs = {
+  enabled: true,
+  chat: true,
+  hugAndMood: true,
+  notes: true,
+  memories: true,
+  dates: true,
+  location: true,
+  anniversary: true,
+};
+
 interface CoupleState {
   activePartnerId: PartnerId;
   anniversaryDate: string; // YYYY-MM-DD
@@ -130,6 +153,18 @@ interface CoupleState {
   memories: MemoryItem[];
   bucketList: BucketItem[];
   loveNotes: LoveNote[];
+  chatMessages: ChatMessage[];
+
+  // Realtime presence & typing (not persisted)
+  partnerTyping: Record<PartnerId, boolean>;
+  onlinePartners: Record<PartnerId, boolean>;
+  isChatFocused: boolean;
+
+  // Notifications
+  notifPrefs: NotificationPrefs;
+  notifications: InAppNotification[];
+  activeToast: InAppNotification | null;
+  lastAnnivNotifiedKey: string | null;
 
   // Live 2-device sync state
   syncConfig: SyncConfig;
@@ -157,7 +192,8 @@ interface CoupleState {
       longitude: number;
       areaName: string;
       accuracyMeters?: number;
-    }
+    },
+    options?: { skipDbPush?: boolean }
   ) => void;
   checkInSpot: (partnerId: PartnerId, spotTag: string) => void;
   toggleLocationSharing: (partnerId: PartnerId) => void;
@@ -187,6 +223,36 @@ interface CoupleState {
   reactToNote: (id: string, emoji: string) => void;
   deleteLoveNote: (id: string) => void;
 
+  // Chat actions
+  sendChatMessage: (input: {
+    senderId: PartnerId;
+    text: string;
+    sticker?: string;
+    imageUri?: string;
+    replyTo?: { id: string; senderId: PartnerId; preview: string };
+  }) => void;
+  reactToChatMessage: (id: string, emoji: string) => void;
+  deleteChatMessage: (id: string) => void;
+  markPartnerMessagesRead: (readerId: PartnerId) => void;
+  setPartnerTyping: (partnerId: PartnerId, isTyping: boolean) => void;
+  setOnlinePartners: (online: Record<PartnerId, boolean>) => void;
+  setIsChatFocused: (focused: boolean) => void;
+
+  // Notification actions
+  pushFeatureNotification: (input: {
+    category: NotificationCategory;
+    title: string;
+    body: string;
+    emoji: string;
+    route?: string;
+    systemAlert?: boolean;
+  }) => void;
+  dismissToast: () => void;
+  markAllNotificationsRead: () => void;
+  clearNotifications: () => void;
+  updateNotifPrefs: (patch: Partial<NotificationPrefs>) => void;
+  setLastAnnivNotifiedKey: (key: string) => void;
+
   // Sync actions
   connectLiveSync: (
     config: Omit<SyncConfig, 'enabled'>,
@@ -195,12 +261,15 @@ interface CoupleState {
   disconnectLiveSync: () => void;
   setSyncStatus: (status: SyncStatus, error?: string | null) => void;
   applyRemoteRoom: (row: any) => void;
+  applyRemoteLiveLocation: (partnerId: PartnerId, loc: LocationSnapshot) => void;
   applyRemoteMemoryUpsert: (item: MemoryItem) => void;
   applyRemoteMemoryDelete: (id: string) => void;
   applyRemoteBucketUpsert: (item: BucketItem) => void;
   applyRemoteBucketDelete: (id: string) => void;
   applyRemoteNoteUpsert: (item: LoveNote) => void;
   applyRemoteNoteDelete: (id: string) => void;
+  applyRemoteMessageUpsert: (item: ChatMessage) => void;
+  applyRemoteMessageDelete: (id: string) => void;
 }
 
 const now = Date.now();
@@ -214,7 +283,16 @@ export const useCoupleStore = create<CoupleState>()(
       hugCount: 128,
       lastHugFrom: 'p2',
       lastHugAt: now - 1000 * 60 * 18,
-      liveWatchEnabled: false,
+      liveWatchEnabled: true,
+
+      partnerTyping: { p1: false, p2: false },
+      onlinePartners: { p1: false, p2: false },
+      isChatFocused: false,
+
+      notifPrefs: DEFAULT_NOTIF_PREFS,
+      notifications: [],
+      activeToast: null,
+      lastAnnivNotifiedKey: null,
 
       syncConfig: {
         supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
@@ -403,6 +481,34 @@ export const useCoupleStore = create<CoupleState>()(
         },
       ],
 
+      chatMessages: [
+        {
+          id: 'msg-1',
+          senderId: 'p2',
+          text: 'Sayang udah makan siang belum? 🍱💕',
+          status: 'read',
+          createdAt: now - 1000 * 60 * 40,
+        },
+        {
+          id: 'msg-2',
+          senderId: 'p1',
+          text: 'Udah barusan! Nanti sore jadi kan kita jalan?',
+          replyToId: 'msg-1',
+          replyToSender: 'p2',
+          replyToPreview: 'Sayang udah makan siang belum? 🍱💕',
+          reaction: '🥰',
+          status: 'read',
+          createdAt: now - 1000 * 60 * 35,
+        },
+        {
+          id: 'msg-3',
+          senderId: 'p2',
+          text: 'Jadi dong! Aku udah siapin kamera buat foto berdua 📸✨',
+          status: 'delivered',
+          createdAt: now - 1000 * 60 * 10,
+        },
+      ],
+
       setActivePartner: (id) => set({ activePartnerId: id }),
 
       updateCoupleSettings: (payload) => {
@@ -493,7 +599,7 @@ export const useCoupleStore = create<CoupleState>()(
           };
         }),
 
-      updatePartnerLocation: (partnerId, payload) =>
+      updatePartnerLocation: (partnerId, payload, options) =>
         set((state) => {
           const nextLoc: LocationSnapshot = {
             ...state.locations[partnerId],
@@ -504,8 +610,14 @@ export const useCoupleStore = create<CoupleState>()(
             isSharing: true,
             updatedAt: Date.now(),
           };
-          const col = partnerId === 'p1' ? 'p1_location' : 'p2_location';
-          void pushRoomFields(state.syncConfig, { [col]: nextLoc });
+
+          if (state.syncConfig.enabled) {
+            broadcastLiveLocation(state.syncConfig.roomCode, partnerId, nextLoc);
+            if (!options?.skipDbPush) {
+              const col = partnerId === 'p1' ? 'p1_location' : 'p2_location';
+              void pushRoomFields(state.syncConfig, { [col]: nextLoc });
+            }
+          }
 
           return {
             locations: {
@@ -522,8 +634,11 @@ export const useCoupleStore = create<CoupleState>()(
             spotTag,
             updatedAt: Date.now(),
           };
-          const col = partnerId === 'p1' ? 'p1_location' : 'p2_location';
-          void pushRoomFields(state.syncConfig, { [col]: nextLoc });
+          if (state.syncConfig.enabled) {
+            broadcastLiveLocation(state.syncConfig.roomCode, partnerId, nextLoc);
+            const col = partnerId === 'p1' ? 'p1_location' : 'p2_location';
+            void pushRoomFields(state.syncConfig, { [col]: nextLoc });
+          }
 
           return {
             locations: {
@@ -540,8 +655,11 @@ export const useCoupleStore = create<CoupleState>()(
             isSharing: !state.locations[partnerId].isSharing,
             updatedAt: Date.now(),
           };
-          const col = partnerId === 'p1' ? 'p1_location' : 'p2_location';
-          void pushRoomFields(state.syncConfig, { [col]: nextLoc });
+          if (state.syncConfig.enabled) {
+            broadcastLiveLocation(state.syncConfig.roomCode, partnerId, nextLoc);
+            const col = partnerId === 'p1' ? 'p1_location' : 'p2_location';
+            void pushRoomFields(state.syncConfig, { [col]: nextLoc });
+          }
 
           return {
             locations: {
@@ -687,6 +805,120 @@ export const useCoupleStore = create<CoupleState>()(
           };
         }),
 
+      // Chat actions
+      sendChatMessage: (input) =>
+        set((state) => {
+          const created: ChatMessage = {
+            id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            senderId: input.senderId,
+            text: input.text,
+            sticker: input.sticker,
+            imageUri: input.imageUri,
+            replyToId: input.replyTo?.id,
+            replyToSender: input.replyTo?.senderId,
+            replyToPreview: input.replyTo?.preview,
+            status: state.syncConfig.enabled && state.syncStatus === 'connected' ? 'delivered' : 'sent',
+            createdAt: Date.now(),
+          };
+          void pushMessageUpsert(state.syncConfig, created);
+          return {
+            chatMessages: [...state.chatMessages, created],
+          };
+        }),
+
+      reactToChatMessage: (id, emoji) =>
+        set((state) => {
+          const updated = state.chatMessages.map((m) =>
+            m.id === id
+              ? { ...m, reaction: m.reaction === emoji ? undefined : emoji }
+              : m
+          );
+          const target = updated.find((m) => m.id === id);
+          if (target) void pushMessageUpsert(state.syncConfig, target);
+          return { chatMessages: updated };
+        }),
+
+      deleteChatMessage: (id) =>
+        set((state) => {
+          void pushMessageDelete(state.syncConfig, id);
+          return {
+            chatMessages: state.chatMessages.filter((m) => m.id !== id),
+          };
+        }),
+
+      markPartnerMessagesRead: (readerId) =>
+        set((state) => {
+          let changed = false;
+          const updated = state.chatMessages.map((m) => {
+            if (m.senderId !== readerId && m.status !== 'read') {
+              changed = true;
+              const nextMsg: ChatMessage = { ...m, status: 'read' };
+              void pushMessageUpsert(state.syncConfig, nextMsg);
+              return nextMsg;
+            }
+            return m;
+          });
+          return changed ? { chatMessages: updated } : {};
+        }),
+
+      setPartnerTyping: (partnerId, isTyping) =>
+        set((state) => ({
+          partnerTyping: {
+            ...state.partnerTyping,
+            [partnerId]: isTyping,
+          },
+        })),
+
+      setOnlinePartners: (online) => set({ onlinePartners: online }),
+
+      setIsChatFocused: (focused) => set({ isChatFocused: focused }),
+
+      // Notifications
+      pushFeatureNotification: (input) => {
+        const state = get();
+        if (!isCategoryEnabled(state.notifPrefs, input.category)) return;
+
+        const notif: InAppNotification = {
+          id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          category: input.category,
+          title: input.title,
+          body: input.body,
+          emoji: input.emoji,
+          route: input.route,
+          createdAt: Date.now(),
+          read: false,
+        };
+
+        set((s) => ({
+          notifications: [notif, ...s.notifications].slice(0, 30),
+          activeToast: notif,
+        }));
+
+        if (input.systemAlert !== false) {
+          void fireSystemNotification({
+            title: `${input.emoji} ${input.title}`,
+            body: input.body,
+            route: input.route,
+          });
+        }
+      },
+
+      dismissToast: () => set({ activeToast: null }),
+
+      markAllNotificationsRead: () =>
+        set((state) => ({
+          notifications: state.notifications.map((n) => ({ ...n, read: true })),
+        })),
+
+      clearNotifications: () => set({ notifications: [], activeToast: null }),
+
+      updateNotifPrefs: (patch) =>
+        set((state) => ({
+          notifPrefs: { ...state.notifPrefs, ...patch },
+        })),
+
+      setLastAnnivNotifiedKey: (key) => set({ lastAnnivNotifiedKey: key }),
+
       connectLiveSync: async (configInput, role) => {
         const nextConfig: SyncConfig = {
           supabaseUrl: configInput.supabaseUrl.trim(),
@@ -712,6 +944,7 @@ export const useCoupleStore = create<CoupleState>()(
           memories: state.memories,
           bucketList: state.bucketList,
           loveNotes: state.loveNotes,
+          chatMessages: state.chatMessages,
         });
 
         if (res.error || !res.data) {
@@ -737,6 +970,7 @@ export const useCoupleStore = create<CoupleState>()(
           memories: res.data.memories,
           bucketList: res.data.bucketList,
           loveNotes: res.data.loveNotes,
+          chatMessages: res.data.chatMessages,
         });
 
         return { ok: true, created: res.created };
@@ -747,71 +981,275 @@ export const useCoupleStore = create<CoupleState>()(
           syncConfig: { ...state.syncConfig, enabled: false },
           syncStatus: 'offline',
           syncError: null,
+          onlinePartners: { p1: false, p2: false },
+          partnerTyping: { p1: false, p2: false },
         })),
 
       setSyncStatus: (status, error = null) =>
         set({ syncStatus: status, syncError: error ?? null }),
 
-      applyRemoteRoom: (row) =>
-        set((state) => ({
-          coupleTitle: row.couple_title ?? state.coupleTitle,
-          anniversaryDate: row.anniversary_date ?? state.anniversaryDate,
-          hugCount: typeof row.hug_count === 'number' ? row.hug_count : state.hugCount,
-          lastHugFrom: row.last_hug_from ?? state.lastHugFrom,
-          lastHugAt: row.last_hug_at ?? state.lastHugAt,
-          partners: {
-            p1: row.p1_profile ?? state.partners.p1,
-            p2: row.p2_profile ?? state.partners.p2,
-          },
-          locations: {
-            p1: row.p1_location ?? state.locations.p1,
-            p2: row.p2_location ?? state.locations.p2,
-          },
-        })),
+      applyRemoteRoom: (row) => {
+        const prev = get();
+        const meId = prev.activePartnerId;
+        const otherId: PartnerId = meId === 'p1' ? 'p2' : 'p1';
+        const partnerName = prev.partners[otherId].name;
 
-      applyRemoteMemoryUpsert: (item) =>
-        set((state) => {
-          const exists = state.memories.some((m) => m.id === item.id);
-          return {
-            memories: exists
-              ? state.memories.map((m) => (m.id === item.id ? item : m))
-              : [item, ...state.memories],
-          };
-        }),
+        const nextP1: PartnerProfile = row.p1_profile ?? prev.partners.p1;
+        const nextP2: PartnerProfile = row.p2_profile ?? prev.partners.p2;
+        const nextLoc1: LocationSnapshot = row.p1_location ?? prev.locations.p1;
+        const nextLoc2: LocationSnapshot = row.p2_location ?? prev.locations.p2;
+        const nextHugCount =
+          typeof row.hug_count === 'number' ? row.hug_count : prev.hugCount;
+
+        // Detect hug notification from partner
+        if (nextHugCount > prev.hugCount && row.last_hug_from === otherId) {
+          prev.pushFeatureNotification({
+            category: 'hug',
+            emoji: '🫂',
+            title: `Pelukan Hangat dari ${partnerName}!`,
+            body: `${partnerName} baru aja ngirim peluk ke kamu 💕 (Total ${nextHugCount} pelukan)`,
+            route: '/',
+          });
+        }
+
+        // Detect mood/status change from partner
+        const prevOther = prev.partners[otherId];
+        const nextOther = otherId === 'p1' ? nextP1 : nextP2;
+        if (
+          nextOther.updatedAt > prevOther.updatedAt &&
+          (nextOther.mood !== prevOther.mood ||
+            nextOther.statusText !== prevOther.statusText)
+        ) {
+          const moodObj = MOOD_OPTIONS.find((m) => m.id === nextOther.mood);
+          prev.pushFeatureNotification({
+            category: 'mood',
+            emoji: moodObj?.emoji ?? '✨',
+            title: `Mood ${partnerName}: ${moodObj?.label ?? 'Update'}`,
+            body: `“${nextOther.statusText}”`,
+            route: '/',
+          });
+        }
+
+        // Detect location check-in or sharing change from partner
+        const prevOtherLoc = prev.locations[otherId];
+        const nextOtherLoc = otherId === 'p1' ? nextLoc1 : nextLoc2;
+        if (nextOtherLoc.updatedAt > prevOtherLoc.updatedAt) {
+          if (nextOtherLoc.spotTag && nextOtherLoc.spotTag !== prevOtherLoc.spotTag) {
+            prev.pushFeatureNotification({
+              category: 'location',
+              emoji: '📍',
+              title: `${partnerName} Check-in: ${nextOtherLoc.spotTag}`,
+              body: `Sekarang berada di ${nextOtherLoc.areaName}`,
+              route: '/lokasi',
+            });
+          } else if (!prevOtherLoc.isSharing && nextOtherLoc.isSharing) {
+            prev.pushFeatureNotification({
+              category: 'location',
+              emoji: '🛰️',
+              title: `${partnerName} Membagikan Lokasi`,
+              body: `Posisi live di ${nextOtherLoc.areaName}`,
+              route: '/lokasi',
+            });
+          }
+        }
+
+        set({
+          coupleTitle: row.couple_title ?? prev.coupleTitle,
+          anniversaryDate: row.anniversary_date ?? prev.anniversaryDate,
+          hugCount: nextHugCount,
+          lastHugFrom: row.last_hug_from ?? prev.lastHugFrom,
+          lastHugAt: row.last_hug_at ?? prev.lastHugAt,
+          partners: { p1: nextP1, p2: nextP2 },
+          locations: { p1: nextLoc1, p2: nextLoc2 },
+        });
+      },
+
+      applyRemoteLiveLocation: (partnerId, loc) => {
+        const prev = get();
+        if (partnerId === prev.activePartnerId) return;
+
+        const myLoc = prev.locations[prev.activePartnerId];
+        const prevLoc = prev.locations[partnerId];
+        const partnerName = prev.partners[partnerId].name;
+
+        const prevDist = getDistanceMeters(
+          myLoc.latitude,
+          myLoc.longitude,
+          prevLoc.latitude,
+          prevLoc.longitude
+        );
+        const nextDist = getDistanceMeters(
+          myLoc.latitude,
+          myLoc.longitude,
+          loc.latitude,
+          loc.longitude
+        );
+
+        // Notify if partner just arrived within 150m
+        if (loc.isSharing && myLoc.isSharing && prevDist >= 150 && nextDist < 150) {
+          prev.pushFeatureNotification({
+            category: 'location',
+            emoji: '💕',
+            title: `${partnerName} Sudah Dekat!`,
+            body: `Jarak kalian kurang dari 150 m (${loc.areaName})`,
+            route: '/lokasi',
+          });
+        }
+
+        set((state) => ({
+          locations: {
+            ...state.locations,
+            [partnerId]: loc,
+          },
+        }));
+      },
+
+      applyRemoteMemoryUpsert: (item) => {
+        const prev = get();
+        const exists = prev.memories.some((m) => m.id === item.id);
+        if (!exists) {
+          prev.pushFeatureNotification({
+            category: 'memories',
+            emoji: item.sticker || '📸',
+            title: 'Kenangan Baru Ditambahkan!',
+            body: `${item.title}${item.location ? ` • ${item.location}` : ''}`,
+            route: '/memories',
+          });
+        }
+        set((state) => ({
+          memories: exists
+            ? state.memories.map((m) => (m.id === item.id ? item : m))
+            : [item, ...state.memories],
+        }));
+      },
 
       applyRemoteMemoryDelete: (id) =>
         set((state) => ({
           memories: state.memories.filter((m) => m.id !== id),
         })),
 
-      applyRemoteBucketUpsert: (item) =>
-        set((state) => {
-          const exists = state.bucketList.some((b) => b.id === item.id);
-          return {
-            bucketList: exists
-              ? state.bucketList.map((b) => (b.id === item.id ? item : b))
-              : [item, ...state.bucketList],
-          };
-        }),
+      applyRemoteBucketUpsert: (item) => {
+        const prev = get();
+        const existing = prev.bucketList.find((b) => b.id === item.id);
+        const otherId: PartnerId = prev.activePartnerId === 'p1' ? 'p2' : 'p1';
+        const partnerName = prev.partners[otherId].name;
+
+        if (!existing && item.createdBy === otherId) {
+          prev.pushFeatureNotification({
+            category: 'dates',
+            emoji: '🎡',
+            title: `Rencana Kencan Baru dari ${partnerName}`,
+            body: item.title,
+            route: '/dates',
+          });
+        } else if (existing && !existing.done && item.done) {
+          prev.pushFeatureNotification({
+            category: 'dates',
+            emoji: '🎉',
+            title: 'Misi Kencan Tercapai!',
+            body: `“${item.title}” selesai!`,
+            route: '/dates',
+          });
+        }
+
+        set((state) => ({
+          bucketList: existing
+            ? state.bucketList.map((b) => (b.id === item.id ? item : b))
+            : [item, ...state.bucketList],
+        }));
+      },
 
       applyRemoteBucketDelete: (id) =>
         set((state) => ({
           bucketList: state.bucketList.filter((b) => b.id !== id),
         })),
 
-      applyRemoteNoteUpsert: (item) =>
-        set((state) => {
-          const exists = state.loveNotes.some((n) => n.id === item.id);
-          return {
-            loveNotes: exists
-              ? state.loveNotes.map((n) => (n.id === item.id ? item : n))
-              : [item, ...state.loveNotes],
-          };
-        }),
+      applyRemoteNoteUpsert: (item) => {
+        const prev = get();
+        const existing = prev.loveNotes.find((n) => n.id === item.id);
+        const partnerName = prev.partners[item.authorId].name;
+
+        if (!existing && item.authorId !== prev.activePartnerId) {
+          prev.pushFeatureNotification({
+            category: 'notes',
+            emoji: item.sticker || '💌',
+            title: `Love Note Baru dari ${partnerName}`,
+            body: item.message,
+            route: '/notes',
+          });
+        } else if (
+          existing &&
+          item.authorId === prev.activePartnerId &&
+          item.reaction &&
+          item.reaction !== existing.reaction
+        ) {
+          const otherName = prev.partners[prev.activePartnerId === 'p1' ? 'p2' : 'p1'].name;
+          prev.pushFeatureNotification({
+            category: 'notes',
+            emoji: item.reaction,
+            title: `${otherName} Bereaksi ke Love Note Kamu`,
+            body: `Memberi reaksi ${item.reaction} pada “${item.message.slice(0, 50)}”`,
+            route: '/notes',
+          });
+        }
+
+        set((state) => ({
+          loveNotes: existing
+            ? state.loveNotes.map((n) => (n.id === item.id ? item : n))
+            : [item, ...state.loveNotes],
+        }));
+      },
 
       applyRemoteNoteDelete: (id) =>
         set((state) => ({
           loveNotes: state.loveNotes.filter((n) => n.id !== id),
+        })),
+
+      applyRemoteMessageUpsert: (item) => {
+        const prev = get();
+        const existing = prev.chatMessages.find((m) => m.id === item.id);
+
+        if (!existing && item.senderId !== prev.activePartnerId) {
+          const senderName = prev.partners[item.senderId].name;
+          const previewText = item.imageUri
+            ? item.text || 'Mengirim foto 📷'
+            : item.sticker
+              ? `${item.sticker} ${item.text || 'Mengirim stiker'}`
+              : item.text;
+
+          if (!prev.isChatFocused) {
+            prev.pushFeatureNotification({
+              category: 'chat',
+              emoji: '💬',
+              title: `Pesan Baru dari ${senderName}`,
+              body: previewText,
+              route: '/chat',
+            });
+          }
+        }
+
+        // If chat is currently focused and message is from partner, mark as read immediately
+        const finalItem: ChatMessage =
+          prev.isChatFocused && item.senderId !== prev.activePartnerId && item.status !== 'read'
+            ? { ...item, status: 'read' }
+            : item;
+
+        if (finalItem !== item) {
+          void pushMessageUpsert(prev.syncConfig, finalItem);
+        }
+
+        set((state) => {
+          const nextList = existing
+            ? state.chatMessages.map((m) => (m.id === finalItem.id ? finalItem : m))
+            : [...state.chatMessages, finalItem];
+          nextList.sort((a, b) => a.createdAt - b.createdAt);
+          return { chatMessages: nextList };
+        });
+      },
+
+      applyRemoteMessageDelete: (id) =>
+        set((state) => ({
+          chatMessages: state.chatMessages.filter((m) => m.id !== id),
         })),
     }),
     {
@@ -830,6 +1268,10 @@ export const useCoupleStore = create<CoupleState>()(
         memories: state.memories,
         bucketList: state.bucketList,
         loveNotes: state.loveNotes,
+        chatMessages: state.chatMessages.slice(-150),
+        notifPrefs: state.notifPrefs,
+        notifications: state.notifications.slice(0, 20),
+        lastAnnivNotifiedKey: state.lastAnnivNotifiedKey,
         syncConfig: state.syncConfig,
       }),
       merge: (persistedState, currentState) => {
@@ -844,6 +1286,10 @@ export const useCoupleStore = create<CoupleState>()(
           locations: {
             ...currentState.locations,
             ...(persisted.locations ?? {}),
+          },
+          notifPrefs: {
+            ...currentState.notifPrefs,
+            ...(persisted.notifPrefs ?? {}),
           },
           syncConfig: {
             ...currentState.syncConfig,

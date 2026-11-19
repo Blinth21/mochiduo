@@ -1,8 +1,10 @@
+import { useIsFocused } from 'expo-router';
 import { Compass, Lock, Navigation } from 'lucide-react-native';
 import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -35,9 +37,16 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
   partner,
   partnerLoc,
 }: CoupleLocationRadarProps) {
+  const isFocused = useIsFocused();
   const pulse = useSharedValue(0);
 
   useEffect(() => {
+    if (!isFocused) {
+      cancelAnimation(pulse);
+      pulse.value = 0;
+      return;
+    }
+
     pulse.set(
       withRepeat(
         withTiming(1, { duration: 2400, easing: Easing.out(Easing.quad) }),
@@ -45,7 +54,11 @@ export const CoupleLocationRadar = React.memo(function CoupleLocationRadar({
         false
       )
     );
-  }, [pulse]);
+
+    return () => {
+      cancelAnimation(pulse);
+    };
+  }, [isFocused, pulse]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: (1 - pulse.value) * 0.45,
